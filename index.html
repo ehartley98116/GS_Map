@@ -5,453 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Goleta Slough Ecosystem Plans Interactive Map</title>
     
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Chart.js for data visualization -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f8ff;
-        }
-
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-
-        .sidebar {
-            width: 400px;
-            background: white;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            padding: 20px;
-            overflow-y: auto;
-            z-index: 1000;
-        }
-
-        .map-container {
-            flex: 1;
-            position: relative;
-        }
-
-        #map {
-            height: 100vh;
-            width: 100%;
-        }
-
-        .header {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .header h1 {
-            color: #2c5530;
-            font-size: 1.4em;
-            margin-bottom: 5px;
-        }
-
-        .header p {
-            color: #666;
-            font-size: 0.9em;
-        }
-
-        .stats-section {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .stat-box {
-            text-align: center;
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        .stat-box.direct {
-            background: #e8f5e8;
-            border: 2px solid #2e7d32;
-        }
-
-        .stat-box.associated {
-            background: #e3f2fd;
-            border: 2px solid #1976d2;
-        }
-
-        .stat-number {
-            font-size: 1.8em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.85em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .threat-dashboard {
-            background: #fff3e0;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 2px solid #ff9800;
-        }
-
-        .threat-dashboard h3 {
-            color: #e65100;
-            margin-bottom: 15px;
-            text-align: center;
-            font-size: 1.1em;
-        }
-
-        .threat-category {
-            margin-bottom: 15px;
-        }
-
-        .threat-category h4 {
-            font-size: 0.9em;
-            margin-bottom: 8px;
-            color: #333;
-            display: flex;
-            align-items: center;
-        }
-
-        .threat-category.shocks h4 {
-            color: #d32f2f;
-        }
-
-        .threat-category.stresses h4 {
-            color: #f57c00;
-        }
-
-        .threat-items {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .threat-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: white;
-            padding: 8px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid #ddd;
-            font-size: 0.85em;
-        }
-
-        .threat-item:hover {
-            background: #f5f5f5;
-            transform: translateX(2px);
-        }
-
-        .threat-item.active {
-            background: #fff3cd;
-            border-color: #ffc107;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .threat-item.shocks.active {
-            background: #ffebee;
-            border-color: #d32f2f;
-        }
-
-        .threat-item.stresses.active {
-            background: #fff3e0;
-            border-color: #f57c00;
-        }
-
-        .threat-name {
-            flex: 1;
-            font-weight: 500;
-        }
-
-        .threat-count {
-            background: #6c757d;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 0.75em;
-            font-weight: bold;
-            min-width: 20px;
-            text-align: center;
-        }
-
-        .threat-item.shocks .threat-count {
-            background: #d32f2f;
-        }
-
-        .threat-item.stresses .threat-count {
-            background: #f57c00;
-        }
-
-        .clear-filters {
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        .clear-btn {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8em;
-            transition: background 0.3s ease;
-        }
-
-        .clear-btn:hover {
-            background: #5a6268;
-        }
-
-        .controls-section {
-            margin-bottom: 20px;
-        }
-
-        .control-group {
-            margin-bottom: 15px;
-        }
-
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .filter-buttons {
-            display: flex;
-            gap: 5px;
-        }
-
-        .filter-btn {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.7em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-align: center;
-        }
-
-        .filter-btn.active {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f8ff; }
+        .container { display: flex; height: 100vh; }
+        .sidebar { width: 400px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); padding: 20px; overflow-y: auto; z-index: 1000; }
+        .map-container { flex: 1; position: relative; }
+        #map { height: 100vh; width: 100%; }
+        
+        .header { margin-bottom: 20px; text-align: center; }
+        .header h1 { color: #2c5530; font-size: 1.4em; margin-bottom: 5px; }
+        .header p { color: #666; font-size: 0.9em; }
+        
+        .stats-section { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .total-plans-box { text-align: center; padding: 12px; border-radius: 5px; background: #f0f0f0; border: 2px solid #666; margin-bottom: 15px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-box { text-align: center; padding: 10px; border-radius: 5px; }
+        .stat-box.direct { background: #e8f5e8; border: 2px solid #2e7d32; }
+        .stat-box.associated { background: #e3f2fd; border: 2px solid #1976d2; }
+        .stat-number { font-size: 1.8em; font-weight: bold; margin-bottom: 5px; }
+        .stat-label { font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .controls-section { margin-bottom: 20px; }
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
+        .filter-buttons { display: flex; gap: 5px; }
+        .filter-btn { flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: 600; transition: all 0.3s ease; text-align: center; }
+        .filter-btn.active { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         .filter-btn.all { background: #6c757d; color: white; }
         .filter-btn.direct { background: #2e7d32; color: white; }
         .filter-btn.associated { background: #1976d2; color: white; }
-
-        .timeline-container {
-            margin-bottom: 15px;
-        }
-
-        .timeline-slider {
-            width: 100%;
-            margin: 10px 0;
-        }
-
-        .timeline-display {
-            text-align: center;
-            font-weight: bold;
-            color: #2c5530;
-            margin: 5px 0;
-        }
-
-        .chart-container {
-            height: 160px;
-            margin-bottom: 20px;
-        }
-
-        .legend {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-
-        .legend h4 {
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .legend-icon {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-
-        .info-panel {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 400px;
-            max-height: 70vh;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        }
-
-        .info-panel.show {
-            display: block;
-        }
-
-        .close-btn {
-            float: right;
-            background: none;
-            border: none;
-            font-size: 1.2em;
-            cursor: pointer;
-            color: #999;
-            padding: 0;
-            margin-left: 10px;
-        }
-
-        .info-header {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #2c5530;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
-
-        .threat-section {
-            margin-bottom: 15px;
-        }
-
-        .threat-section h4 {
-            color: #d32f2f;
-            margin-bottom: 8px;
-            font-size: 1em;
-        }
-
-        .stress-section h4 {
-            color: #f57c00;
-            margin-bottom: 8px;
-            font-size: 1em;
-        }
-
-        .threat-list, .stress-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .threat-list li, .stress-list li {
-            background: #f5f5f5;
-            margin: 3px 0;
-            padding: 5px 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-            border-left: 3px solid #ddd;
-        }
-
-        .threat-list li {
-            border-left-color: #d32f2f;
-        }
-
-        .stress-list li {
-            border-left-color: #f57c00;
-        }
-
-        .custom-popup {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .popup-header {
-            font-weight: bold;
-            color: #2c5530;
-            margin-bottom: 5px;
-        }
-
-        .popup-location {
-            color: #666;
-            font-style: italic;
-            margin-bottom: 10px;
-        }
-
-        .popup-stats {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 10px;
-        }
-
-        .popup-stat {
-            text-align: center;
-        }
-
-        .popup-stat-number {
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-
-        .popup-stat-label {
-            font-size: 0.8em;
-            text-transform: uppercase;
-        }
-
+        .filter-btn:hover { opacity: 0.9; }
+        
+        .threat-dashboard { background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #ff9800; }
+        .threat-dashboard h3 { color: #e65100; margin-bottom: 15px; text-align: center; font-size: 1.1em; }
+        .threat-category { margin-bottom: 15px; }
+        .threat-category h4 { font-size: 0.9em; margin-bottom: 8px; color: #333; display: flex; align-items: center; }
+        .threat-category.shocks h4 { color: #d32f2f; }
+        .threat-category.stresses h4 { color: #f57c00; }
+        .threat-items { display: flex; flex-direction: column; gap: 5px; }
+        .threat-item { display: flex; align-items: center; justify-content: space-between; background: white; padding: 8px 10px; border-radius: 4px; cursor: pointer; transition: all 0.3s ease; border: 1px solid #ddd; font-size: 0.85em; }
+        .threat-item:hover { background: #f5f5f5; transform: translateX(2px); }
+        .threat-item.active { background: #fff3cd; border-color: #ffc107; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .threat-item.shocks.active { background: #ffebee; border-color: #d32f2f; }
+        .threat-item.stresses.active { background: #fff3e0; border-color: #f57c00; }
+        .threat-name { flex: 1; font-weight: 500; }
+        .threat-count { background: #6c757d; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.75em; font-weight: bold; min-width: 20px; text-align: center; }
+        .threat-item.shocks .threat-count { background: #d32f2f; }
+        .threat-item.stresses .threat-count { background: #f57c00; }
+        .clear-filters { text-align: center; margin-top: 10px; }
+        .clear-btn { background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em; transition: background 0.3s ease; }
+        .clear-btn:hover { background: #5a6268; }
+        
+        .timeline-container { margin-bottom: 15px; }
+        .timeline-slider { width: 100%; margin: 10px 0; }
+        .timeline-display { text-align: center; font-weight: bold; color: #2c5530; margin: 5px 0; }
+        .chart-container { height: 160px; margin-bottom: 20px; }
+        
+        .legend { background: white; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
+        .legend h4 { margin-bottom: 10px; color: #333; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 8px; }
+        .legend-icon { width: 16px; height: 16px; border-radius: 50%; margin-right: 10px; }
+        
+        .info-panel { position: absolute; bottom: 20px; right: 20px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 400px; max-height: 70vh; overflow-y: auto; z-index: 1000; display: none; }
+        .info-panel.show { display: block; }
+        .close-btn { float: right; background: none; border: none; font-size: 1.2em; cursor: pointer; color: #999; padding: 0; margin-left: 10px; }
+        .info-header { font-size: 1.2em; font-weight: bold; color: #2c5530; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .threat-section { margin-bottom: 15px; }
+        .threat-section h4 { color: #d32f2f; margin-bottom: 8px; font-size: 1em; }
+        .stress-section h4 { color: #f57c00; margin-bottom: 8px; font-size: 1em; }
+        .threat-list, .stress-list { list-style: none; padding: 0; }
+        .threat-list li, .stress-list li { background: #f5f5f5; margin: 3px 0; padding: 5px 8px; border-radius: 4px; font-size: 0.9em; border-left: 3px solid #ddd; }
+        .threat-list li { border-left-color: #d32f2f; }
+        .stress-list li { border-left-color: #f57c00; }
+        .data-source { background: #f0f0f0; padding: 8px; border-radius: 4px; margin-top: 10px; font-size: 0.8em; color: #666; border-left: 3px solid #999; }
+        .custom-popup { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .popup-header { font-weight: bold; color: #2c5530; margin-bottom: 5px; }
+        .popup-stats { display: flex; gap: 15px; margin-bottom: 10px; }
+        .popup-stat { text-align: center; }
+        .popup-stat-number { font-size: 1.2em; font-weight: bold; }
+        .popup-stat-label { font-size: 0.8em; text-transform: uppercase; }
         .popup-direct { color: #2e7d32; }
         .popup-associated { color: #1976d2; }
-
+        
         @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-                height: auto;
-                max-height: 50vh;
-            }
-            
-            #map {
-                height: 50vh;
-            }
-
-            .info-panel {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                max-width: 90vw;
-                max-height: 80vh;
-                right: auto;
-                bottom: auto;
-            }
+            .container { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; max-height: 50vh; }
+            #map { height: 50vh; }
+            .info-panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 90vw; max-height: 80vh; right: auto; bottom: auto; }
         }
     </style>
 </head>
@@ -464,6 +108,11 @@
             </div>
 
             <div class="stats-section">
+                <div class="total-plans-box">
+                    <div class="stat-number" id="total-count">51</div>
+                    <div class="stat-label">Total Plans</div>
+                </div>
+                
                 <div class="stats-grid">
                     <div class="stat-box direct">
                         <div class="stat-number" id="direct-count">17</div>
@@ -474,9 +123,28 @@
                         <div class="stat-label">Associated Relevance</div>
                     </div>
                 </div>
-                <div class="stat-box" style="background: #f0f0f0; border: 2px solid #666;">
-                    <div class="stat-number" id="total-count">51</div>
-                    <div class="stat-label">Total Plans</div>
+            </div>
+
+            <div class="controls-section">
+                <div class="control-group">
+                    <label>Filter by Relevance Type:</label>
+                    <div class="filter-buttons">
+                        <button class="filter-btn all active" onclick="setFilter('all')">All Plans</button>
+                        <button class="filter-btn direct" onclick="setFilter('direct')">Direct Relevance</button>
+                        <button class="filter-btn associated" onclick="setFilter('associated')">Associated Relevance</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Timeline (Year Range):</label>
+                    <div class="timeline-container">
+                        <input type="range" id="timeline-slider" class="timeline-slider" 
+                               min="1992" max="2025" value="2025" 
+                               oninput="updateTimeline(this.value)">
+                        <div class="timeline-display">
+                            <span>1992 - </span><span id="current-year">2025</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -495,29 +163,6 @@
 
                 <div class="clear-filters">
                     <button class="clear-btn" onclick="clearThreatFilters()">Clear Threat Filters</button>
-                </div>
-            </div>
-
-            <div class="controls-section">
-                <div class="control-group">
-                    <label>Filter by Relevance Type:</label>
-                    <div class="filter-buttons">
-                        <button class="filter-btn all active" onclick="filterPlans('all')">All Plans</button>
-                        <button class="filter-btn direct" onclick="filterPlans('direct')">Direct Relevance</button>
-                        <button class="filter-btn associated" onclick="filterPlans('associated')">Associated Relevance</button>
-                    </div>
-                </div>
-
-                <div class="control-group">
-                    <label>Timeline (Year Range):</label>
-                    <div class="timeline-container">
-                        <input type="range" id="timeline-slider" class="timeline-slider" 
-                               min="1992" max="2025" value="2025" 
-                               oninput="updateTimeline(this.value)">
-                        <div class="timeline-display">
-                            <span>1992 - </span><span id="current-year">2025</span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -547,6 +192,7 @@
                 <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; font-size: 0.85em; color: #666;">
                     <p><strong>Direct Relevance:</strong> Primary focus on Goleta Slough ecosystem</p>
                     <p><strong>Associated Relevance:</strong> Significant but broader geographic scope</p>
+                    <p><strong>Enhanced Coverage:</strong> Threat analysis for all locations</p>
                 </div>
             </div>
         </div>
@@ -566,31 +212,103 @@
         var locationThreats = {
             "Goleta Slough": {
                 shocks: ["Coastal or Tidal Flooding", "Rainfall Flooding/Stormwater", "Severe Storms"],
-                stresses: ["Environmental Degradation/Loss of Biodiversity", "Mouth Management", "Sea Level Rise & Groundwater Intrusion"]
+                stresses: ["Environmental Degradation/Loss of Biodiversity", "Mouth Management", "Sea Level Rise & Groundwater Intrusion"],
+                dataSource: "Detailed vulnerability studies and management plans"
             },
             "Santa Barbara Airport": {
                 shocks: ["Coastal or Tidal Flooding", "Rainfall Flooding/Stormwater", "Severe Storms"],
-                stresses: ["Sea Level Rise & Groundwater Intrusion", "Inadequate Infrastructure", "Climate Change"]
+                stresses: ["Sea Level Rise & Groundwater Intrusion", "Inadequate Infrastructure", "Climate Change"],
+                dataSource: "Airport-specific climate assessments and drainage studies"
             },
             "City of Goleta": {
                 shocks: ["Wildfire", "Severe Storms", "Coastal or Tidal Flooding"],
-                stresses: ["Sea Level Rise & Groundwater Intrusion", "Inadequate Infrastructure", "Coastal Erosion"]
+                stresses: ["Sea Level Rise & Groundwater Intrusion", "Inadequate Infrastructure", "Coastal Erosion"],
+                dataSource: "Municipal hazard mitigation and resilience plans"
             },
             "Santa Barbara County": {
                 shocks: ["Coastal or Tidal Flooding", "Rainfall Flooding/Stormwater", "Wildfire"],
-                stresses: ["Coastal Erosion", "Environmental Degradation/Loss of Biodiversity", "Sea Level Rise & Groundwater Intrusion"]
+                stresses: ["Coastal Erosion", "Environmental Degradation/Loss of Biodiversity", "Sea Level Rise & Groundwater Intrusion"],
+                dataSource: "County-wide vulnerability assessments"
             },
             "City of Santa Barbara": {
                 shocks: ["Coastal or Tidal Flooding", "Severe Storms", "Infrastructure Failure"],
-                stresses: ["Sea Level Rise & Groundwater Intrusion", "Coastal Erosion", "Environmental Degradation/Loss of Biodiversity"]
+                stresses: ["Sea Level Rise & Groundwater Intrusion", "Coastal Erosion", "Environmental Degradation/Loss of Biodiversity"],
+                dataSource: "City sea level rise adaptation and vulnerability studies"
             },
             "UCSB": {
                 shocks: ["Coastal or Tidal Flooding", "Severe Storms", "Wildfire"],
-                stresses: ["Environmental Degradation/Loss of Biodiversity", "Sea Level Rise & Groundwater Intrusion", "Coastal Erosion"]
+                stresses: ["Environmental Degradation/Loss of Biodiversity", "Sea Level Rise & Groundwater Intrusion", "Coastal Erosion"],
+                dataSource: "Campus adaptation strategies and open space management plans"
             },
             "Goleta Water District": {
                 shocks: ["Power Outage", "Infrastructure Failure", "Extreme Heat"],
-                stresses: ["Drought/Water Management Challenges", "Inadequate Infrastructure", "Climate Change"]
+                stresses: ["Drought/Water Management Challenges", "Inadequate Infrastructure", "Climate Change"],
+                dataSource: "Water district management and climate adaptation plans"
+            },
+            "Isla Vista": {
+                shocks: ["Coastal or Tidal Flooding", "Severe Storms", "Rainfall Flooding/Stormwater"],
+                stresses: ["Sea Level Rise & Groundwater Intrusion", "Coastal Erosion", "Urban Runoff Management"],
+                dataSource: "Geographic proximity to coast + storm drain management plan analysis"
+            },
+            "Goleta Beach": {
+                shocks: ["Coastal or Tidal Flooding", "Severe Storms", "Extreme Weather Events"],
+                stresses: ["Coastal Erosion", "Sea Level Rise & Groundwater Intrusion", "Recreational Pressure"],
+                dataSource: "Coastal location + carrying capacity management plan analysis"
+            },
+            "Santa Barbara coastal area": {
+                shocks: ["Coastal or Tidal Flooding", "Severe Storms", "Marine Heat Waves"],
+                stresses: ["Coastal Erosion", "Environmental Degradation/Loss of Biodiversity", "Sea Level Rise & Groundwater Intrusion"],
+                dataSource: "Regional coastal ecosystem vulnerability assessment"
+            },
+            "California coastal region": {
+                shocks: ["Coastal or Tidal Flooding", "Severe Storms", "Marine Heat Waves"],
+                stresses: ["Environmental Degradation/Loss of Biodiversity", "Sea Level Rise & Groundwater Intrusion", "Coastal Erosion"],
+                dataSource: "Broad coastal region + marsh resilience research analysis"
+            },
+            "Santa Barbara County coastal zone": {
+                shocks: ["Coastal or Tidal Flooding", "Severe Storms", "Rainfall Flooding/Stormwater"],
+                stresses: ["Coastal Erosion", "Sea Level Rise & Groundwater Intrusion", "Environmental Degradation/Loss of Biodiversity"],
+                dataSource: "Coastal zone management plan analysis"
+            },
+            "San Marcos Foothills": {
+                shocks: ["Wildfire", "Extreme Heat", "Severe Storms"],
+                stresses: ["Environmental Degradation/Loss of Biodiversity", "Climate Change", "Habitat Fragmentation"],
+                dataSource: "Foothill geography + open space management plan analysis"
+            },
+            "Goleta Valley": {
+                shocks: ["Wildfire", "Extreme Heat", "Rainfall Flooding/Stormwater"],
+                stresses: ["Climate Change", "Environmental Degradation/Loss of Biodiversity", "Urban Development Pressure"],
+                dataSource: "Valley location + wildfire enhancement plan analysis"
+            },
+            "Eastern Goleta Valley": {
+                shocks: ["Wildfire", "Extreme Heat", "Severe Storms"],
+                stresses: ["Urban Development Pressure", "Climate Change", "Infrastructure Capacity"],
+                dataSource: "Inland valley geography + community planning documents"
+            },
+            "Goleta Sanitary District": {
+                shocks: ["Infrastructure Failure", "Extreme Heat", "Power Outage"],
+                stresses: ["Climate Change", "Inadequate Infrastructure", "System Capacity Challenges"],
+                dataSource: "Utility infrastructure focus + climate adaptation plan analysis"
+            },
+            "Southern California": {
+                shocks: ["Wildfire", "Extreme Heat", "Drought"],
+                stresses: ["Environmental Degradation/Loss of Biodiversity", "Climate Change", "Water Scarcity"],
+                dataSource: "Regional geography + steelhead recovery plan analysis"
+            },
+            "California Central Coast": {
+                shocks: ["Coastal or Tidal Flooding", "Wildfire", "Extreme Weather Events"],
+                stresses: ["Climate Change", "Environmental Degradation/Loss of Biodiversity", "Sea Level Rise & Groundwater Intrusion"],
+                dataSource: "Central coast location + climate resilience analysis"
+            },
+            "Santa Barbara and Ventura counties": {
+                shocks: ["Coastal or Tidal Flooding", "Wildfire", "Severe Storms"],
+                stresses: ["Coastal Erosion", "Climate Change", "Regional Coordination Challenges"],
+                dataSource: "Multi-county region + sediment management plan analysis"
+            },
+            "Goleta": {
+                shocks: ["Coastal or Tidal Flooding", "Wildfire", "Severe Storms"],
+                stresses: ["Sea Level Rise & Groundwater Intrusion", "Urban Development Pressure", "Climate Change"],
+                dataSource: "Regional analysis based on Goleta geographic characteristics"
             }
         };
 
@@ -660,12 +378,36 @@
         var markers = [];
         var chart;
 
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            var allBtns = document.querySelectorAll('.filter-btn');
+            for (var i = 0; i < allBtns.length; i++) {
+                allBtns[i].classList.remove('active');
+            }
+            
+            var btns = document.getElementsByClassName('filter-btn');
+            for (var i = 0; i < btns.length; i++) {
+                if (btns[i].textContent.includes('All Plans') && filter === 'all') {
+                    btns[i].classList.add('active');
+                } else if (btns[i].textContent.includes('Direct Relevance') && filter === 'direct') {
+                    btns[i].classList.add('active');
+                } else if (btns[i].textContent.includes('Associated Relevance') && filter === 'associated') {
+                    btns[i].classList.add('active');
+                }
+            }
+            
+            updateMarkers();
+            updateChart();
+        }
+
         function initMap() {
             map = L.map('map').setView([34.4140, -119.8489], 11);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
             L.control.scale().addTo(map);
+            
             initThreatDashboard();
             updateMarkers();
             initChart();
@@ -689,13 +431,13 @@
                 return [shock, shockCounts[shock]];
             }).sort(function(a, b) {
                 return b[1] - a[1];
-            }).slice(0, 5);
+            }).slice(0, 8);
 
             var topStresses = Object.keys(stressCounts).map(function(stress) {
                 return [stress, stressCounts[stress]];
             }).sort(function(a, b) {
                 return b[1] - a[1];
-            }).slice(0, 5);
+            }).slice(0, 8);
 
             var shockContainer = document.getElementById('shock-items');
             topShocks.forEach(function(shockData) {
@@ -732,7 +474,13 @@
             } else {
                 selectedThreat = threat;
                 threatType = type;
-                event.target.closest('.threat-item').classList.add('active');
+                
+                for (var i = 0; i < threatItems.length; i++) {
+                    if (threatItems[i].textContent.includes(threat)) {
+                        threatItems[i].classList.add('active');
+                        break;
+                    }
+                }
             }
             updateMarkers();
         }
@@ -887,7 +635,7 @@
                 
                 recentPlans.forEach(function(plan) {
                     var relevanceType = planData.direct.indexOf(plan) !== -1 ? '(Direct)' : '(Associated)';
-                    content += '<li style="margin: 5px 0; font-size: 0.9em;">' + plan.title + ' ' + relevanceType + ' (' + plan.year + ')</li>';
+                    content += '<li style="margin: 5px 0; font-size: 0.9em; cursor: pointer;" onclick="alert(\'Plan: ' + plan.title.replace(/'/g, "\\'") + '\')">' + plan.title + ' ' + relevanceType + ' (' + plan.year + ')</li>';
                 });
                 content += '</ul></div>';
             }
@@ -924,8 +672,12 @@
                 });
                 
                 content += '</ul></div>';
+
+                content += '<div class="data-source">' +
+                    '<strong>Data Source:</strong> ' + threats.dataSource +
+                '</div>';
             } else {
-                content += '<div style="color: #666; font-style: italic;">Detailed threat analysis available for major planning areas.</div>';
+                content += '<div style="color: #666; font-style: italic;">Threat analysis data not available for this location.</div>';
             }
 
             var allPlans = group.direct.concat(group.associated);
@@ -938,7 +690,7 @@
             recentPlans.forEach(function(plan) {
                 var type = planData.direct.indexOf(plan) !== -1 ? 'Direct' : 'Associated';
                 var typeColor = planData.direct.indexOf(plan) !== -1 ? '#2e7d32' : '#1976d2';
-                content += '<li style="margin: 8px 0; padding: 5px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em;">' +
+                content += '<li style="margin: 8px 0; padding: 5px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em; cursor: pointer;" onclick="alert(\'Plan: ' + plan.title.replace(/'/g, "\\'") + '\')">' +
                     '<span style="color: ' + typeColor + '; font-weight: bold;">[' + type + ']</span> ' +
                     plan.title + ' (' + plan.year + ')' +
                     '</li>';
@@ -958,19 +710,6 @@
             if (currentFilter === 'associated') return planData.associated.indexOf(plan) !== -1;
             
             return true;
-        }
-
-        function filterPlans(filter) {
-            currentFilter = filter;
-            
-            var filterBtns = document.querySelectorAll('.filter-btn');
-            for (var i = 0; i < filterBtns.length; i++) {
-                filterBtns[i].classList.remove('active');
-            }
-            document.querySelector('.filter-btn.' + filter).classList.add('active');
-            
-            updateMarkers();
-            updateChart();
         }
 
         function updateTimeline(year) {
@@ -1108,9 +847,9 @@
             document.getElementById('info-panel').classList.remove('show');
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        window.onload = function() {
             initMap();
-        });
+        };
     </script>
 </body>
 </html>
