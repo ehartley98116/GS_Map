@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goleta Slough Ecosystem Plans Interactive Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f8ff;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 400px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+
+        .header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c5530;
+            font-size: 1.4em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .stats-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .stat-box.direct {
+            background: #e8f5e8;
+            border: 2px solid #2e7d32;
+        }
+
+        .stat-box.associated {
+            background: #e3f2fd;
+            border: 2px solid #1976d2;
+        }
+
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .threat-dashboard {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 2px solid #ff9800;
+        }
+
+        .threat-dashboard h3 {
+            color: #e65100;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .threat-category {
+            margin-bottom: 15px;
+        }
+
+        .threat-category h4 {
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+
+        .threat-category.shocks h4 {
+            color: #d32f2f;
+        }
+
+        .threat-category.stresses h4 {
+            color: #f57c00;
+        }
+
+        .threat-items {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .threat-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 8px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #ddd;
+            font-size: 0.85em;
+        }
+
+        .threat-item:hover {
+            background: #f5f5f5;
+            transform: translateX(2px);
+        }
+
+        .threat-item.active {
+            background: #fff3cd;
+            border-color: #ffc107;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .threat-item.shocks.active {
+            background: #ffebee;
+            border-color: #d32f2f;
+        }
+
+        .threat-item.stresses.active {
+            background: #fff3e0;
+            border-color: #f57c00;
+        }
+
+        .threat-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .threat-count {
+            background: #6c757d;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .threat-item.shocks .threat-count {
+            background: #d32f2f;
+        }
+
+        .threat-item.stresses .threat-count {
+            background: #f57c00;
+        }
+
+        .clear-filters {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .clear-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: background 0.3s ease;
+        }
+
+        .clear-btn:hover {
+            background: #5a6268;
+        }
+
+        .controls-section {
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .filter-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .filter-btn.active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .filter-btn.all { background: #6c757d; color: white; }
+        .filter-btn.direct { background: #2e7d32; color: white; }
+        .filter-btn.associated { background: #1976d2; color: white; }
+
+        .timeline-container {
+            margin-bottom: 15px;
+        }
+
+        .timeline-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .timeline-display {
+            text-align: center;
+            font-weight: bold;
+            color: #2c5530;
+            margin: 5px 0;
+        }
+
+        .chart-container {
+            height: 160px;
+            margin-bottom: 20px;
+        }
+
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .legend h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .legend-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 400px;
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .info-panel.show {
+            display: block;
+        }
+
+        .close-btn {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            margin-left: 10px;
+        }
+
+        .info-header {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c5530;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .threat-section {
+            margin-bottom: 15px;
+        }
+
+        .threat-section h4 {
+            color: #d32f2f;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .stress-section h4 {
+            color: #f57c00;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .threat-list, .stress-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .threat-list li, .stress-list li {
+            background: #f5f5f5;
+            margin: 3px 0;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border-left: 3px solid #ddd;
+        }
+
+        .threat-list li {
+            border-left-color: #d32f2f;
+        }
+
+        .stress-list li {
+            border-left-color: #f57c00;
+        }
+
+        /* Custom Leaflet popup styles */
+        .custom-popup {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .popup-header {
+            font-weight: bold;
+            color: #2c5530;
+            margin-bottom: 5px;
+        }
+
+        .popup-location {
+            color: #666;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .popup-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .popup-stat {
+            text-align: center;
+        }
+
+        .popup-stat-number {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .popup-stat-label {
+            font-size: 0.8em;
+            text-transform: uppercase;
+        }
+
+        .popup-direct { color: #2e7d32; }
+        .popup-associated { color: #1976d2; }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 50vh;
+            }
+            
+            #map {
+                height: 50vh;
+            }
+
+            .info-panel {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                max-width: 90vw;
+                max-height: 80vh;
+                right: auto;
+                bottom: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="header">
+                <h1>Goleta Slough Ecosystem Plans</h1>
+                <p>Interactive Impact Analysis Map</p>
+            </div>
+
+            <div class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-box direct">
+                        <div class="stat-number" id="direct-count">17</div>
+                        <div class="stat-label">Direct Relevance</div>
+                    </div>
+                    <div class="stat-box associated">
+                        <div class="stat-number" id="associated-count">34</div>
+                        <div class="stat-label">Associated Relevance</div>
+                    </div>
+                </div>
+                <div class="stat-box" style="background: #f0f0f0; border: 2px solid #666;">
+                    <div class="stat-number" id="total-count">51</div>
+                    <div class="stat-label">Total Plans</div>
+                </div>
+            </div>
+
+            <div class="threat-dashboard">
+                <h3>🎯 Regional Threat Analysis</h3>
+                
+                <div class="threat-category shocks">
+                    <h4>🔥 Primary Shocks</h4>
+                    <div class="threat-items" id="shock-items"></div>
+                </div>
+
+                <div class="threat-category stresses">
+                    <h4>⚠️ Primary Stresses</h4>
+                    <div class="threat-items" id="stress-items"></div>
+                </div>
+
+                <div class="clear-filters">
+                    <button class="clear-btn" onclick="clearThreatFilters()">Clear Threat Filters</button>
+                </div>
+            </div>
+
+            <div class="controls-section">
+                <div class="control-group">
+                    <label>Filter by Relevance Type:</label>
+                    <div class="filter-buttons">
+                        <button class="filter-btn all active" onclick="filterPlans('all')">All Plans</button>
+                        <button class="filter-btn direct" onclick="filterPlans('direct')">Direct Relevance</button>
+                        <button class="filter-btn associated" onclick="filterPlans('associated')">Associated Relevance</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Timeline (Year Range):</label>
+                    <div class="timeline-container">
+                        <input type="range" id="timeline-slider" class="timeline-slider" 
+                               min="1992" max="2025" value="2025" 
+                               oninput="updateTimeline(this.value)">
+                        <div class="timeline-display">
+                            <span>1992 - </span><span id="current-year">2025</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="timeline-chart"></canvas>
+            </div>
+
+            <div class="legend">
+                <h4>Map Legend</h4>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background-color: #2e7d32;"></div>
+                    <span>Direct Relevance Plans</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background-color: #1976d2;"></div>
+                    <span>Associated Relevance Plans</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background-color: #ff9800; border: 2px solid #f57c00;"></div>
+                    <span>Primary Focus: Goleta Slough</span>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                    <p><strong>Circle Size:</strong> Number of plans at location</p>
+                    <p><strong>Click markers</strong> for detailed threats & stresses</p>
+                    <p><strong>Click threats above</strong> to filter locations</p>
+                </div>
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; font-size: 0.85em; color: #666;">
+                    <p><strong>Direct Relevance:</strong> Primary focus on Goleta Slough ecosystem</p>
+                    <p><strong>Associated Relevance:</strong> Significant but broader geographic scope</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="info-panel" id="info-panel">
+                <button class="close-btn" onclick="closeInfoPanel()">&times;</button>
+                <div id="info-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Location-specific threat and stress data
+        const locationThreats = {
+            "Goleta Slough": {
+                shocks: ["Coastal or Tidal Flooding", "Rainfall Flooding/Stormwater", "Severe Storms"],
+                stresses: ["Environmental Degradation/Loss of Biodiversity", "Mouth Management", "Sea Level Rise & Groundwater Intrusion"]
+            },
+            "Santa Barbara Airport": {
+                shocks: ["Coastal or Tidal Flooding", "Rainfall Flooding/Stormwater", "Severe Storms"],
+                stresses: ["Sea Level Rise & Groundwater Intrusion", "Inadequate Infrastructure", "Climate Change"]
+            },
+            "City of Goleta": {
+                shocks: ["Wildfire", "Severe Storms", "Coastal or Tidal Flooding"],
+                stresses: ["Sea Level Rise & Groundwater Intrusion", "Inadequate Infrastructure", "Coastal Erosion"]
+            },
+            "Santa Barbara County": {
+                shocks: ["Coastal or Tidal Flooding", "Rainfall Flooding/Stormwater", "Wildfire"],
+                stresses: ["Coastal Erosion", "Environmental Degradation/Loss of Biodiversity", "Sea Level Rise & Groundwater Intrusion"]
+            },
+            "City of Santa Barbara": {
+                shocks: ["Coastal or Tidal Flooding", "Severe Storms", "Infrastructure Failure"],
+                stresses: ["Sea Level Rise & Groundwater Intrusion", "Coastal Erosion", "Environmental Degradation/Loss of Biodiversity"]
+            },
+            "UCSB": {
+                shocks: ["Coastal or Tidal Flooding", "Severe Storms", "Wildfire"],
+                stresses: ["Environmental Degradation/Loss of Biodiversity", "Sea Level Rise & Groundwater Intrusion", "Coastal Erosion"]
+            },
+            "Goleta Water District": {
+                shocks: ["Power Outage", "Infrastructure Failure", "Extreme Heat"],
+                stresses: ["Drought/Water Management Challenges", "Inadequate Infrastructure", "Climate Change"]
+            }
+        };
+
+        // Plan data extracted from the documents
+        const planData = {
+            direct: [
+                { id: 4, title: "Emergency Permit to Open Goleta Slough Mouth", location: "Goleta Slough", year: 2012, lat: 34.4140, lng: -119.8489 },
+                { id: 21, title: "Goleta Slough Relevant Document", location: "Goleta Slough", year: 1992, lat: 34.4140, lng: -119.8489 },
+                { id: 23, title: "Goleta Slough Mouth Opening, DO, and Fish Kill Data Tracking", location: "Goleta Slough", year: 2021, lat: 34.4140, lng: -119.8489 },
+                { id: 35, title: "Santa Barbara Airport Wildlife Hazard Assessment", location: "Santa Barbara Airport", year: 2016, lat: 34.4264, lng: -119.8408 },
+                { id: 38, title: "EIR Supplement for Goleta Slough Routine Maintenance", location: "Goleta Slough", year: 2000, lat: 34.4140, lng: -119.8489 },
+                { id: 41, title: "Santa Barbara Airport Drainage Study Update", location: "Santa Barbara Airport", year: 2024, lat: 34.4264, lng: -119.8408 },
+                { id: 47, title: "Goleta Beach County Park Carrying Capacity and Management Plan", location: "Goleta Beach", year: 1999, lat: 34.4167, lng: -119.8578 },
+                { id: 48, title: "Goleta Slough Berm Elevation Lowering Report", location: "Goleta Slough", year: 2017, lat: 34.4140, lng: -119.8489 },
+                { id: 54, title: "Goleta Slough Ecosystem Informational Plan", location: "Goleta Slough", year: 2015, lat: 34.4140, lng: -119.8489 },
+                { id: 56, title: "Santa Barbara Airport Storm and Flood Events Presentation", location: "Santa Barbara Airport", year: 2024, lat: 34.4264, lng: -119.8408 },
+                { id: 57, title: "Santa Barbara Airport Climate Vulnerability Assessment", location: "Santa Barbara Airport", year: 2024, lat: 34.4264, lng: -119.8408 },
+                { id: 62, title: "Goleta Slough Ecosystem Management Plan Update", location: "Goleta Slough", year: 2012, lat: 34.4140, lng: -119.8489 },
+                { id: 64, title: "Goleta Slough Long-Term Biological Monitoring Program", location: "Goleta Slough", year: 2024, lat: 34.4140, lng: -119.8489 },
+                { id: 65, title: "Goleta Slough Mouth Management Project Biological Assessment", location: "Goleta Slough", year: 2015, lat: 34.4140, lng: -119.8489 },
+                { id: 66, title: "Historical Human Development in and around Goleta Slough", location: "Goleta Slough", year: 2020, lat: 34.4140, lng: -119.8489 },
+                { id: 89, title: "Santa Barbara Airport Land Use Compatibility Plan", location: "Santa Barbara Airport", year: 2023, lat: 34.4264, lng: -119.8408 },
+                { id: 94, title: "Goleta Slough Mouth Management Project Protocols", location: "Goleta Slough", year: 2015, lat: 34.4140, lng: -119.8489 }
+            ],
+            associated: [
+                { id: 3, title: "Santa Barbara County Sea Level Rise Vulnerability Assessment", location: "Santa Barbara County", year: 2017, lat: 34.4208, lng: -119.6982 },
+                { id: 5, title: "Research on Marsh Resilience in Intermittently Closed Estuaries", location: "California coastal region", year: 2021, lat: 34.4500, lng: -119.7000 },
+                { id: 8, title: "City of Goleta Local Hazard Mitigation Plan", location: "City of Goleta", year: 2023, lat: 34.4333, lng: -119.8167 },
+                { id: 13, title: "Goleta Valley Wildfire and Habitat Enhancement Recommendations", location: "Goleta Valley", year: 2021, lat: 34.4400, lng: -119.8200 },
+                { id: 17, title: "City of Goleta Creek and Watershed Management Plan", location: "City of Goleta", year: 2020, lat: 34.4333, lng: -119.8167 },
+                { id: 19, title: "Santa Barbara Area Coastal Ecosystem Vulnerability Assessment", location: "Santa Barbara coastal area", year: 2017, lat: 34.4140, lng: -119.6850 },
+                { id: 25, title: "Santa Barbara County Climate Change Vulnerability Assessment", location: "Santa Barbara County", year: 2021, lat: 34.4208, lng: -119.6982 },
+                { id: 29, title: "Goleta Water District Infrastructure Investment Plan", location: "Goleta Water District", year: 2025, lat: 34.4300, lng: -119.8100 },
+                { id: 30, title: "UCSB Sea Level Rise Adaptation Strategy", location: "UCSB", year: 2022, lat: 34.4133, lng: -119.8489 },
+                { id: 31, title: "Isla Vista Storm Drain Trash Capture Plan", location: "Isla Vista", year: 2020, lat: 34.4108, lng: -119.8578 },
+                { id: 33, title: "San Marcos Foothills Preserve Long-Term Open Space Management Plan", location: "San Marcos Foothills", year: 2014, lat: 34.4500, lng: -119.8000 },
+                { id: 36, title: "Goleta Water District Urban Water Management Plan", location: "Goleta Water District", year: 2021, lat: 34.4300, lng: -119.8100 },
+                { id: 37, title: "UCSB Long Range Development Plan", location: "UCSB", year: 2025, lat: 34.4133, lng: -119.8489 },
+                { id: 42, title: "Southern California Steelhead Trout Observations Compilation", location: "Southern California", year: 2020, lat: 34.0000, lng: -118.5000 },
+                { id: 45, title: "City of Santa Barbara Local Coastal Program", location: "City of Santa Barbara", year: 2023, lat: 34.4194, lng: -119.6982 },
+                { id: 49, title: "Eastern Goleta Valley Vision Statement", location: "Eastern Goleta Valley", year: 2006, lat: 34.4400, lng: -119.7800 },
+                { id: 53, title: "Goleta Community Plan", location: "Goleta", year: 1995, lat: 34.4333, lng: -119.8167 },
+                { id: 55, title: "UCSB Open Space Management Plan", location: "UCSB", year: 2024, lat: 34.4133, lng: -119.8489 },
+                { id: 59, title: "City of Santa Barbara Sea-Level Rise Adaptation Plan", location: "City of Santa Barbara", year: 2021, lat: 34.4194, lng: -119.6982 },
+                { id: 60, title: "City of Goleta Resilience Initiatives Presentation", location: "City of Goleta", year: 2024, lat: 34.4333, lng: -119.8167 },
+                { id: 61, title: "City of Goleta Coastal Hazards and Vulnerabilities Report", location: "City of Goleta", year: 2015, lat: 34.4333, lng: -119.8167 },
+                { id: 63, title: "Goleta Sanitary District 5-Year Strategic Plan", location: "Goleta Sanitary District", year: 2020, lat: 34.4300, lng: -119.8050 },
+                { id: 67, title: "Pacific Salmon and Steelhead 5-Year Status Review", location: "Southern California", year: 2023, lat: 34.0000, lng: -118.5000 },
+                { id: 74, title: "City of Goleta General Plan", location: "City of Goleta", year: 2006, lat: 34.4333, lng: -119.8167 },
+                { id: 78, title: "City of Santa Barbara Sea Level Rise Vulnerability Study", location: "City of Santa Barbara", year: 2015, lat: 34.4194, lng: -119.6982 },
+                { id: 82, title: "Goleta Water District Drought Preparedness Plan", location: "Goleta Water District", year: 2021, lat: 34.4300, lng: -119.8100 },
+                { id: 83, title: "Eastern Goleta Valley Community Plan Refinement", location: "Eastern Goleta Valley", year: 2015, lat: 34.4400, lng: -119.7800 },
+                { id: 84, title: "Goleta Water District Local Hazard Mitigation Plan", location: "Goleta Water District", year: 2023, lat: 34.4300, lng: -119.8100 },
+                { id: 91, title: "Southern California Steelhead Recovery Plan", location: "Southern California", year: 2012, lat: 34.0000, lng: -118.5000 },
+                { id: 93, title: "Goleta Sanitary Water Resource Recovery District CIP Story Map", location: "Goleta Sanitary District", year: 2023, lat: 34.4300, lng: -119.8050 },
+                { id: 95, title: "California Central Coast Climate Resilience Efforts Analysis", location: "California Central Coast", year: 2022, lat: 34.5000, lng: -119.5000 },
+                { id: 96, title: "Regional Sediment Management Plan", location: "Santa Barbara and Ventura counties", year: 2018, lat: 34.3000, lng: -119.0000 },
+                { id: 97, title: "Goleta Sanitary District Climate Adaptation Plan", location: "Goleta Sanitary District", year: 2022, lat: 34.4300, lng: -119.8050 },
+                { id: 99, title: "Santa Barbara County Coastal Zone Management Plan", location: "Santa Barbara County coastal zone", year: 2019, lat: 34.4000, lng: -119.7000 }
+            ]
+        };
+
+        // Map initialization
+        let map;
+        let currentFilter = 'all';
+        let currentYear = 2025;
+        let selectedThreat = null;
+        let threatType = null; // 'shock' or 'stress'
+        let markers = [];
+        let chart;
+
+        function initMap() {
+            // Initialize map centered on Goleta Slough
+            map = L.map('map').setView([34.4140, -119.8489], 11);
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add custom control for zoom
+            L.control.scale().addTo(map);
+
+            initThreatDashboard();
+            updateMarkers();
+            initChart();
+        }
+
+        function initThreatDashboard() {
+            // Aggregate all threats and stresses
+            const shockCounts = {};
+            const stressCounts = {};
+
+            Object.values(locationThreats).forEach(location => {
+                location.shocks.forEach(shock => {
+                    shockCounts[shock] = (shockCounts[shock] || 0) + 1;
+                });
+                location.stresses.forEach(stress => {
+                    stressCounts[stress] = (stressCounts[stress] || 0) + 1;
+                });
+            });
+
+            // Sort by frequency and take top 5
+            const topShocks = Object.entries(shockCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            const topStresses = Object.entries(stressCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            // Populate shock items
+            const shockContainer = document.getElementById('shock-items');
+            topShocks.forEach(([shock, count]) => {
+                const item = document.createElement('div');
+                item.className = 'threat-item shocks';
+                item.onclick = () => filterByThreat(shock, 'shock');
+                item.innerHTML = `
+                    <span class="threat-name">${shock}</span>
+                    <span class="threat-count">${count}</span>
+                `;
+                shockContainer.appendChild(item);
+            });
+
+            // Populate stress items
+            const stressContainer = document.getElementById('stress-items');
+            topStresses.forEach(([stress, count]) => {
+                const item = document.createElement('div');
+                item.className = 'threat-item stresses';
+                item.onclick = () => filterByThreat(stress, 'stress');
+                item.innerHTML = `
+                    <span class="threat-name">${stress}</span>
+                    <span class="threat-count">${count}</span>
+                `;
+                stressContainer.appendChild(item);
+            });
+        }
+
+        function filterByThreat(threat, type) {
+            // Clear previous selections
+            document.querySelectorAll('.threat-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // If clicking the same threat, clear the filter
+            if (selectedThreat === threat && threatType === type) {
+                selectedThreat = null;
+                threatType = null;
+            } else {
+                selectedThreat = threat;
+                threatType = type;
+                
+                // Highlight selected item
+                event.target.closest('.threat-item').classList.add('active');
+            }
+
+            updateMarkers();
+        }
+
+        function clearThreatFilters() {
+            selectedThreat = null;
+            threatType = null;
+            document.querySelectorAll('.threat-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            updateMarkers();
+        }
+
+        function locationHasThreat(location, threat, type) {
+            const locationData = locationThreats[location];
+            if (!locationData) return false;
+
+            if (type === 'shock') {
+                return locationData.shocks.includes(threat);
+            } else if (type === 'stress') {
+                return locationData.stresses.includes(threat);
+            }
+            return false;
+        }
+
+        function updateMarkers() {
+            // Clear existing markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            // Group plans by location
+            const locationGroups = {};
+            
+            const allPlans = [...planData.direct, ...planData.associated];
+            
+            allPlans.forEach(plan => {
+                if (shouldShowPlan(plan)) {
+                    const key = `${plan.lat},${plan.lng}`;
+                    if (!locationGroups[key]) {
+                        locationGroups[key] = {
+                            lat: plan.lat,
+                            lng: plan.lng,
+                            location: plan.location,
+                            direct: [],
+                            associated: []
+                        };
+                    }
+                    
+                    if (planData.direct.includes(plan)) {
+                        locationGroups[key].direct.push(plan);
+                    } else {
+                        locationGroups[key].associated.push(plan);
+                    }
+                }
+            });
+
+            // Create markers for each location group
+            Object.values(locationGroups).forEach(group => {
+                // Skip if threat filter is active and location doesn't have the threat
+                if (selectedThreat && !locationHasThreat(group.location, selectedThreat, threatType)) {
+                    return;
+                }
+
+                const totalPlans = group.direct.length + group.associated.length;
+                const directCount = group.direct.length;
+                const associatedCount = group.associated.length;
+
+                // Determine marker style
+                let color = '#666';
+                let fillColor = '#666';
+                let opacity = 0.7;
+
+                if (selectedThreat) {
+                    // If threat filter is active, highlight matching locations
+                    color = threatType === 'shock' ? '#d32f2f' : '#f57c00';
+                    fillColor = threatType === 'shock' ? '#ffcdd2' : '#ffe0b2';
+                    opacity = 0.9;
+                } else {
+                    if (currentFilter === 'direct' && directCount > 0) {
+                        color = '#2e7d32';
+                        fillColor = '#2e7d32';
+                    } else if (currentFilter === 'associated' && associatedCount > 0) {
+                        color = '#1976d2';
+                        fillColor = '#1976d2';
+                    } else if (currentFilter === 'all') {
+                        if (directCount > associatedCount) {
+                            color = '#2e7d32';
+                            fillColor = '#2e7d32';
+                        } else {
+                            color = '#1976d2';
+                            fillColor = '#1976d2';
+                        }
+                    }
+
+                    // Special highlighting for Goleta Slough
+                    if (group.location === 'Goleta Slough') {
+                        color = '#f57c00';
+                        fillColor = '#ff9800';
+                    }
+                }
+
+                // Calculate marker size based on number of plans
+                const radius = Math.max(8, Math.min(25, 8 + totalPlans * 2));
+
+                const marker = L.circleMarker([group.lat, group.lng], {
+                    radius: radius,
+                    color: color,
+                    weight: 3,
+                    fillColor: fillColor,
+                    fillOpacity: opacity
+                });
+
+                // Create popup content
+                const popupContent = createPopupContent(group);
+                marker.bindPopup(popupContent);
+
+                // Add click event for detailed info panel
+                marker.on('click', function() {
+                    showInfoPanel(group);
+                });
+
+                marker.addTo(map);
+                markers.push(marker);
+            });
+
+            updateStats();
+        }
+
+        function createPopupContent(group) {
+            const totalPlans = group.direct.length + group.associated.length;
+            
+            let content = `
+                <div class="custom-popup">
+                    <div class="popup-header">${group.location}</div>
+                    <div class="popup-stats">
+                        <div class="popup-stat">
+                            <div class="popup-stat-number popup-direct">${group.direct.length}</div>
+                            <div class="popup-stat-label">Direct</div>
+                        </div>
+                        <div class="popup-stat">
+                            <div class="popup-stat-number popup-associated">${group.associated.length}</div>
+                            <div class="popup-stat-label">Associated</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <strong>Total Plans: ${totalPlans}</strong>
+                    </div>
+            `;
+
+            // Show threat highlight if filtered
+            if (selectedThreat) {
+                content += `<div style="margin-top: 10px; padding: 8px; background: ${threatType === 'shock' ? '#ffebee' : '#fff3e0'}; border-radius: 4px; border-left: 3px solid ${threatType === 'shock' ? '#d32f2f' : '#f57c00'};">
+                    <strong>Highlighted for:</strong> ${selectedThreat}
+                </div>`;
+            }
+
+            if (totalPlans <= 5) {
+                content += '<div style="margin-top: 10px;"><strong>Recent Plans:</strong><ul>';
+                const recentPlans = [...group.direct, ...group.associated]
+                    .sort((a, b) => b.year - a.year)
+                    .slice(0, 3);
+                
+                recentPlans.forEach(plan => {
+                    const relevanceType = planData.direct.includes(plan) ? '(Direct)' : '(Associated)';
+                    content += `<li style="margin: 5px 0; font-size: 0.9em;">${plan.title} ${relevanceType} (${plan.year})</li>`;
+                });
+                content += '</ul></div>';
+            }
+
+            content += `<div style="margin-top: 10px; font-size: 0.8em; color: #666;">Click marker for detailed threat analysis</div></div>`;
+
+            return content;
+        }
+
+        function showInfoPanel(group) {
+            const threats = locationThreats[group.location];
+            let content = `
+                <div class="info-header">${group.location}</div>
+                <div style="margin-bottom: 15px;">
+                    <strong>${group.direct.length}</strong> Direct Relevance • 
+                    <strong>${group.associated.length}</strong> Associated Relevance Plans
+                </div>
+            `;
+
+            if (threats) {
+                content += `
+                    <div class="threat-section">
+                        <h4>🔥 Primary Shocks</h4>
+                        <ul class="threat-list">
+                            ${threats.shocks.map(shock => `<li>\${shock}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="stress-section">
+                        <h4>⚠️ Primary Stresses</h4>
+                        <ul class="stress-list">
+                            ${threats.stresses.map(stress => `<li>\${stress}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            } else {
+                content += `
+                    <div style="color: #666; font-style: italic;">
+                        Detailed threat analysis available for major planning areas.
+                    </div>
+                `;
+            }
+
+            // Add recent plans summary
+            const allPlans = [...group.direct, ...group.associated];
+            const recentPlans = allPlans.sort((a, b) => b.year - a.year).slice(0, 5);
+            
+            content += `
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+                    <h4 style="color: #333; margin-bottom: 10px;">Recent Planning Activity</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        ${recentPlans.map(plan => {
+                            const type = planData.direct.includes(plan) ? 'Direct' : 'Associated';
+                            const typeColor = planData.direct.includes(plan) ? '#2e7d32' : '#1976d2';
+                            return `<li style="margin: 8px 0; padding: 5px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em;">
+                                <span style="color: \${typeColor}; font-weight: bold;">[\${type}]</span> 
+                                \${plan.title} (\${plan.year})
+                            </li>`;
+                        }).join('')}
+                    </ul>
+                </div>
+            `;
+
+            document.getElementById('info-content').innerHTML = content;
+            document.getElementById('info-panel').classList.add('show');
+        }
+
+        function shouldShowPlan(plan) {
+            if (plan.year > currentYear) return false;
+            
+            if (currentFilter === 'all') return true;
+            if (currentFilter === 'direct') return planData.direct.includes(plan);
+            if (currentFilter === 'associated') return planData.associated.includes(plan);
+            
+            return true;
+        }
+
+        function filterPlans(filter) {
+            currentFilter = filter;
+            
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`.filter-btn.${filter}`).classList.add('active');
+            
+            updateMarkers();
+            updateChart();
+        }
+
+        function updateTimeline(year) {
+            currentYear = parseInt(year);
+            document.getElementById('current-year').textContent = year;
+            updateMarkers();
+            updateChart();
+        }
+
+        function updateStats() {
+            const visibleDirect = planData.direct.filter(shouldShowPlan).length;
+            const visibleAssociated = planData.associated.filter(shouldShowPlan).length;
+            const total = visibleDirect + visibleAssociated;
+
+            document.getElementById('direct-count').textContent = visibleDirect;
+            document.getElementById('associated-count').textContent = visibleAssociated;
+            document.getElementById('total-count').textContent = total;
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('timeline-chart').getContext('2d');
+            
+            // Prepare data for timeline chart
+            const years = Array.from({length: 2025 - 1992 + 1}, (_, i) => 1992 + i);
+            const directByYear = {};
+            const associatedByYear = {};
+
+            years.forEach(year => {
+                directByYear[year] = 0;
+                associatedByYear[year] = 0;
+            });
+
+            planData.direct.forEach(plan => {
+                if (plan.year >= 1992 && plan.year <= currentYear) {
+                    directByYear[plan.year]++;
+                }
+            });
+
+            planData.associated.forEach(plan => {
+                if (plan.year >= 1992 && plan.year <= currentYear) {
+                    associatedByYear[plan.year]++;
+                }
+            });
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: years.filter(year => year <= currentYear),
+                    datasets: [
+                        {
+                            label: 'Direct Relevance',
+                            data: years.filter(year => year <= currentYear).map(year => directByYear[year]),
+                            backgroundColor: '#2e7d32',
+                            borderColor: '#1b5e20',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Associated Relevance',
+                            data: years.filter(year => year <= currentYear).map(year => associatedByYear[year]),
+                            backgroundColor: '#1976d2',
+                            borderColor: '#0d47a1',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Plans by Year and Relevance Type'
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Year'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Number of Plans'
+                            },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!chart) return;
+
+            const years = Array.from({length: currentYear - 1992 + 1}, (_, i) => 1992 + i);
+            const directByYear = {};
+            const associatedByYear = {};
+
+            years.forEach(year => {
+                directByYear[year] = 0;
+                associatedByYear[year] = 0;
+            });
+
+            planData.direct.forEach(plan => {
+                if (plan.year >= 1992 && plan.year <= currentYear) {
+                    directByYear[plan.year]++;
+                }
+            });
+
+            planData.associated.forEach(plan => {
+                if (plan.year >= 1992 && plan.year <= currentYear) {
+                    associatedByYear[plan.year]++;
+                }
+            });
+
+            chart.data.labels = years;
+            chart.data.datasets[0].data = years.map(year => directByYear[year]);
+            chart.data.datasets[1].data = years.map(year => associatedByYear[year]);
+            chart.update();
+        }
+
+        function closeInfoPanel() {
+            document.getElementById('info-panel').classList.remove('show');
+        }
+
+        // Initialize map when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+        });
+    </script>
+</body>
+</html>
