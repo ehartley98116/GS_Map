@@ -65,6 +65,12 @@
         .info-panel.show { display: block; }
         .close-btn { float: right; background: none; border: none; font-size: 1.2em; cursor: pointer; color: #999; padding: 0; margin-left: 10px; }
         .info-header { font-size: 1.2em; font-weight: bold; color: #2c5530; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .info-stats { display: flex; gap: 15px; margin-bottom: 15px; justify-content: center; }
+        .info-stat { text-align: center; }
+        .info-stat-number { font-size: 1.5em; font-weight: bold; }
+        .info-stat-label { font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; }
+        .info-direct { color: #2e7d32; }
+        .info-associated { color: #1976d2; }
         .threat-section { margin-bottom: 15px; }
         .threat-section h4 { color: #d32f2f; margin-bottom: 8px; font-size: 1em; }
         .stress-section h4 { color: #f57c00; margin-bottom: 8px; font-size: 1em; }
@@ -73,14 +79,6 @@
         .threat-list li { border-left-color: #d32f2f; }
         .stress-list li { border-left-color: #f57c00; }
         .data-source { background: #f0f0f0; padding: 8px; border-radius: 4px; margin-top: 10px; font-size: 0.8em; color: #666; border-left: 3px solid #999; }
-        .custom-popup { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .popup-header { font-weight: bold; color: #2c5530; margin-bottom: 5px; }
-        .popup-stats { display: flex; gap: 15px; margin-bottom: 10px; }
-        .popup-stat { text-align: center; }
-        .popup-stat-number { font-size: 1.2em; font-weight: bold; }
-        .popup-stat-label { font-size: 0.8em; text-transform: uppercase; }
-        .popup-direct { color: #2e7d32; }
-        .popup-associated { color: #1976d2; }
         
         @media (max-width: 768px) {
             .container { flex-direction: column; }
@@ -562,9 +560,7 @@
                     fillOpacity: opacity
                 });
 
-                var popupContent = createPopupContent(group);
-                marker.bindPopup(popupContent);
-
+                // Only bind click event - no popup
                 marker.on('click', function() {
                     showInfoPanel(group);
                 });
@@ -574,56 +570,36 @@
             });
         }
 
-        function createPopupContent(group) {
+        function showInfoPanel(group) {
+            var threats = locationThreats[group.location];
             var totalPlans = group.direct.length + group.associated.length;
             
-            var content = '<div class="custom-popup">' +
-                '<div class="popup-header">' + group.location + '</div>' +
-                '<div class="popup-stats">' +
-                    '<div class="popup-stat">' +
-                        '<div class="popup-stat-number popup-direct">' + group.direct.length + '</div>' +
-                        '<div class="popup-stat-label">Direct</div>' +
-                    '</div>' +
-                    '<div class="popup-stat">' +
-                        '<div class="popup-stat-number popup-associated">' + group.associated.length + '</div>' +
-                        '<div class="popup-stat-label">Associated</div>' +
-                    '</div>' +
+            var content = '<div class="info-header">' + group.location + '</div>';
+            
+            // Plan statistics
+            content += '<div class="info-stats">' +
+                '<div class="info-stat">' +
+                    '<div class="info-stat-number info-direct">' + group.direct.length + '</div>' +
+                    '<div class="info-stat-label">Direct Relevance</div>' +
                 '</div>' +
-                '<div style="margin-top: 10px;"><strong>Total Plans: ' + totalPlans + '</strong></div>';
+                '<div class="info-stat">' +
+                    '<div class="info-stat-number info-associated">' + group.associated.length + '</div>' +
+                    '<div class="info-stat-label">Associated Relevance</div>' +
+                '</div>' +
+            '</div>';
+            
+            content += '<div style="text-align: center; margin-bottom: 15px; font-weight: bold; color: #666;">' +
+                'Total Plans: ' + totalPlans + '</div>';
 
+            // Show highlighted threat if applicable
             if (selectedThreat) {
                 var bgColor = threatType === 'shock' ? '#ffebee' : '#fff3e0';
                 var borderColor = threatType === 'shock' ? '#d32f2f' : '#f57c00';
-                content += '<div style="margin-top: 10px; padding: 8px; background: ' + bgColor + '; border-radius: 4px; border-left: 3px solid ' + borderColor + ';">' +
+                content += '<div style="margin-bottom: 15px; padding: 8px; background: ' + bgColor + '; border-radius: 4px; border-left: 3px solid ' + borderColor + ';">' +
                     '<strong>Highlighted for:</strong> ' + selectedThreat + '</div>';
             }
 
-            if (totalPlans <= 5) {
-                content += '<div style="margin-top: 10px;"><strong>Recent Plans:</strong><ul>';
-                var recentPlans = group.direct.concat(group.associated)
-                    .sort(function(a, b) { return b.year - a.year; })
-                    .slice(0, 3);
-                
-                recentPlans.forEach(function(plan) {
-                    var relevanceType = planData.direct.indexOf(plan) !== -1 ? '(Direct)' : '(Associated)';
-                    content += '<li style="margin: 5px 0; font-size: 0.9em; cursor: pointer;" onclick="alert(\'Plan: ' + plan.title.replace(/'/g, "\\'") + '\')">' + plan.title + ' ' + relevanceType + ' (' + plan.year + ')</li>';
-                });
-                content += '</ul></div>';
-            }
-
-            content += '<div style="margin-top: 10px; font-size: 0.8em; color: #666;">Click marker for detailed threat analysis</div></div>';
-
-            return content;
-        }
-
-        function showInfoPanel(group) {
-            var threats = locationThreats[group.location];
-            var content = '<div class="info-header">' + group.location + '</div>' +
-                '<div style="margin-bottom: 15px;">' +
-                    '<strong>' + group.direct.length + '</strong> Direct Relevance • ' +
-                    '<strong>' + group.associated.length + '</strong> Associated Relevance Plans' +
-                '</div>';
-
+            // Threat analysis
             if (threats) {
                 content += '<div class="threat-section">' +
                     '<h4>🔥 Primary Shocks</h4>' +
@@ -651,6 +627,7 @@
                 content += '<div style="color: #666; font-style: italic;">Threat analysis data not available for this location.</div>';
             }
 
+            // Recent planning activity
             var allPlans = group.direct.concat(group.associated);
             var recentPlans = allPlans.sort(function(a, b) { return b.year - a.year; }).slice(0, 5);
             
