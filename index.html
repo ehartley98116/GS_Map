@@ -20,15 +20,6 @@
         .header h1 { color: #2c5530; font-size: 1.4em; margin-bottom: 5px; }
         .header p { color: #666; font-size: 0.9em; }
         
-        .stats-section { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .total-plans-box { text-align: center; padding: 12px; border-radius: 5px; background: #f0f0f0; border: 2px solid #666; margin-bottom: 15px; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .stat-box { text-align: center; padding: 10px; border-radius: 5px; }
-        .stat-box.direct { background: #e8f5e8; border: 2px solid #2e7d32; }
-        .stat-box.associated { background: #e3f2fd; border: 2px solid #1976d2; }
-        .stat-number { font-size: 1.8em; font-weight: bold; margin-bottom: 5px; }
-        .stat-label { font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; }
-        
         .controls-section { margin-bottom: 20px; }
         .control-group { margin-bottom: 15px; }
         .control-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
@@ -105,24 +96,6 @@
             <div class="header">
                 <h1>Goleta Slough Ecosystem Plans</h1>
                 <p>Interactive Impact Analysis Map</p>
-            </div>
-
-            <div class="stats-section">
-                <div class="total-plans-box">
-                    <div class="stat-number" id="total-count">51</div>
-                    <div class="stat-label">Total Plans</div>
-                </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-box direct">
-                        <div class="stat-number" id="direct-count">17</div>
-                        <div class="stat-label">Direct Relevance</div>
-                    </div>
-                    <div class="stat-box associated">
-                        <div class="stat-number" id="associated-count">34</div>
-                        <div class="stat-label">Associated Relevance</div>
-                    </div>
-                </div>
             </div>
 
             <div class="controls-section">
@@ -599,8 +572,6 @@
                 marker.addTo(map);
                 markers.push(marker);
             });
-
-            updateStats();
         }
 
         function createPopupContent(group) {
@@ -717,16 +688,6 @@
             document.getElementById('current-year').textContent = year;
             updateMarkers();
             updateChart();
-        }
-
-        function updateStats() {
-            var visibleDirect = planData.direct.filter(shouldShowPlan).length;
-            var visibleAssociated = planData.associated.filter(shouldShowPlan).length;
-            var total = visibleDirect + visibleAssociated;
-
-            document.getElementById('direct-count').textContent = visibleDirect;
-            document.getElementById('associated-count').textContent = visibleAssociated;
-            document.getElementById('total-count').textContent = total;
         }
 
         function initChart() {
