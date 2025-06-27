@@ -388,7 +388,6 @@
             border-left-color: #f57c00;
         }
 
-        /* Custom Leaflet popup styles */
         .custom-popup {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
@@ -561,12 +560,10 @@
         </div>
     </div>
 
-    <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // Location-specific threat and stress data
-        const locationThreats = {
+        var locationThreats = {
             "Goleta Slough": {
                 shocks: ["Coastal or Tidal Flooding", "Rainfall Flooding/Stormwater", "Severe Storms"],
                 stresses: ["Environmental Degradation/Loss of Biodiversity", "Mouth Management", "Sea Level Rise & Groundwater Intrusion"]
@@ -597,8 +594,7 @@
             }
         };
 
-        // Plan data extracted from the documents
-        const planData = {
+        var planData = {
             direct: [
                 { id: 4, title: "Emergency Permit to Open Goleta Slough Mouth", location: "Goleta Slough", year: 2012, lat: 34.4140, lng: -119.8489 },
                 { id: 21, title: "Goleta Slough Relevant Document", location: "Goleta Slough", year: 1992, lat: 34.4140, lng: -119.8489 },
@@ -656,137 +652,125 @@
             ]
         };
 
-        // Map initialization
-        let map;
-        let currentFilter = 'all';
-        let currentYear = 2025;
-        let selectedThreat = null;
-        let threatType = null; // 'shock' or 'stress'
-        let markers = [];
-        let chart;
+        var map;
+        var currentFilter = 'all';
+        var currentYear = 2025;
+        var selectedThreat = null;
+        var threatType = null;
+        var markers = [];
+        var chart;
 
         function initMap() {
-            // Initialize map centered on Goleta Slough
             map = L.map('map').setView([34.4140, -119.8489], 11);
-
-            // Add OpenStreetMap tiles
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
-
-            // Add custom control for zoom
             L.control.scale().addTo(map);
-
             initThreatDashboard();
             updateMarkers();
             initChart();
         }
 
         function initThreatDashboard() {
-            // Aggregate all threats and stresses
-            const shockCounts = {};
-            const stressCounts = {};
+            var shockCounts = {};
+            var stressCounts = {};
 
-            Object.values(locationThreats).forEach(location => {
-                location.shocks.forEach(shock => {
+            Object.keys(locationThreats).forEach(function(locationKey) {
+                var location = locationThreats[locationKey];
+                location.shocks.forEach(function(shock) {
                     shockCounts[shock] = (shockCounts[shock] || 0) + 1;
                 });
-                location.stresses.forEach(stress => {
+                location.stresses.forEach(function(stress) {
                     stressCounts[stress] = (stressCounts[stress] || 0) + 1;
                 });
             });
 
-            // Sort by frequency and take top 5
-            const topShocks = Object.entries(shockCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 5);
+            var topShocks = Object.keys(shockCounts).map(function(shock) {
+                return [shock, shockCounts[shock]];
+            }).sort(function(a, b) {
+                return b[1] - a[1];
+            }).slice(0, 5);
 
-            const topStresses = Object.entries(stressCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 5);
+            var topStresses = Object.keys(stressCounts).map(function(stress) {
+                return [stress, stressCounts[stress]];
+            }).sort(function(a, b) {
+                return b[1] - a[1];
+            }).slice(0, 5);
 
-            // Populate shock items
-            const shockContainer = document.getElementById('shock-items');
-            topShocks.forEach(([shock, count]) => {
-                const item = document.createElement('div');
+            var shockContainer = document.getElementById('shock-items');
+            topShocks.forEach(function(shockData) {
+                var shock = shockData[0];
+                var count = shockData[1];
+                var item = document.createElement('div');
                 item.className = 'threat-item shocks';
-                item.onclick = () => filterByThreat(shock, 'shock');
-                item.innerHTML = `
-                    <span class="threat-name">${shock}</span>
-                    <span class="threat-count">${count}</span>
-                `;
+                item.onclick = function() { filterByThreat(shock, 'shock'); };
+                item.innerHTML = '<span class="threat-name">' + shock + '</span><span class="threat-count">' + count + '</span>';
                 shockContainer.appendChild(item);
             });
 
-            // Populate stress items
-            const stressContainer = document.getElementById('stress-items');
-            topStresses.forEach(([stress, count]) => {
-                const item = document.createElement('div');
+            var stressContainer = document.getElementById('stress-items');
+            topStresses.forEach(function(stressData) {
+                var stress = stressData[0];
+                var count = stressData[1];
+                var item = document.createElement('div');
                 item.className = 'threat-item stresses';
-                item.onclick = () => filterByThreat(stress, 'stress');
-                item.innerHTML = `
-                    <span class="threat-name">${stress}</span>
-                    <span class="threat-count">${count}</span>
-                `;
+                item.onclick = function() { filterByThreat(stress, 'stress'); };
+                item.innerHTML = '<span class="threat-name">' + stress + '</span><span class="threat-count">' + count + '</span>';
                 stressContainer.appendChild(item);
             });
         }
 
         function filterByThreat(threat, type) {
-            // Clear previous selections
-            document.querySelectorAll('.threat-item').forEach(item => {
-                item.classList.remove('active');
-            });
+            var threatItems = document.querySelectorAll('.threat-item');
+            for (var i = 0; i < threatItems.length; i++) {
+                threatItems[i].classList.remove('active');
+            }
 
-            // If clicking the same threat, clear the filter
             if (selectedThreat === threat && threatType === type) {
                 selectedThreat = null;
                 threatType = null;
             } else {
                 selectedThreat = threat;
                 threatType = type;
-                
-                // Highlight selected item
                 event.target.closest('.threat-item').classList.add('active');
             }
-
             updateMarkers();
         }
 
         function clearThreatFilters() {
             selectedThreat = null;
             threatType = null;
-            document.querySelectorAll('.threat-item').forEach(item => {
-                item.classList.remove('active');
-            });
+            var threatItems = document.querySelectorAll('.threat-item');
+            for (var i = 0; i < threatItems.length; i++) {
+                threatItems[i].classList.remove('active');
+            }
             updateMarkers();
         }
 
         function locationHasThreat(location, threat, type) {
-            const locationData = locationThreats[location];
+            var locationData = locationThreats[location];
             if (!locationData) return false;
 
             if (type === 'shock') {
-                return locationData.shocks.includes(threat);
+                return locationData.shocks.indexOf(threat) !== -1;
             } else if (type === 'stress') {
-                return locationData.stresses.includes(threat);
+                return locationData.stresses.indexOf(threat) !== -1;
             }
             return false;
         }
 
         function updateMarkers() {
-            // Clear existing markers
-            markers.forEach(marker => map.removeLayer(marker));
+            markers.forEach(function(marker) {
+                map.removeLayer(marker);
+            });
             markers = [];
 
-            // Group plans by location
-            const locationGroups = {};
+            var locationGroups = {};
+            var allPlans = planData.direct.concat(planData.associated);
             
-            const allPlans = [...planData.direct, ...planData.associated];
-            
-            allPlans.forEach(plan => {
+            allPlans.forEach(function(plan) {
                 if (shouldShowPlan(plan)) {
-                    const key = `${plan.lat},${plan.lng}`;
+                    var key = plan.lat + ',' + plan.lng;
                     if (!locationGroups[key]) {
                         locationGroups[key] = {
                             lat: plan.lat,
@@ -797,7 +781,7 @@
                         };
                     }
                     
-                    if (planData.direct.includes(plan)) {
+                    if (planData.direct.indexOf(plan) !== -1) {
                         locationGroups[key].direct.push(plan);
                     } else {
                         locationGroups[key].associated.push(plan);
@@ -805,24 +789,22 @@
                 }
             });
 
-            // Create markers for each location group
-            Object.values(locationGroups).forEach(group => {
-                // Skip if threat filter is active and location doesn't have the threat
+            Object.keys(locationGroups).forEach(function(key) {
+                var group = locationGroups[key];
+                
                 if (selectedThreat && !locationHasThreat(group.location, selectedThreat, threatType)) {
                     return;
                 }
 
-                const totalPlans = group.direct.length + group.associated.length;
-                const directCount = group.direct.length;
-                const associatedCount = group.associated.length;
+                var totalPlans = group.direct.length + group.associated.length;
+                var directCount = group.direct.length;
+                var associatedCount = group.associated.length;
 
-                // Determine marker style
-                let color = '#666';
-                let fillColor = '#666';
-                let opacity = 0.7;
+                var color = '#666';
+                var fillColor = '#666';
+                var opacity = 0.7;
 
                 if (selectedThreat) {
-                    // If threat filter is active, highlight matching locations
                     color = threatType === 'shock' ? '#d32f2f' : '#f57c00';
                     fillColor = threatType === 'shock' ? '#ffcdd2' : '#ffe0b2';
                     opacity = 0.9;
@@ -843,17 +825,15 @@
                         }
                     }
 
-                    // Special highlighting for Goleta Slough
                     if (group.location === 'Goleta Slough') {
                         color = '#f57c00';
                         fillColor = '#ff9800';
                     }
                 }
 
-                // Calculate marker size based on number of plans
-                const radius = Math.max(8, Math.min(25, 8 + totalPlans * 2));
+                var radius = Math.max(8, Math.min(25, 8 + totalPlans * 2));
 
-                const marker = L.circleMarker([group.lat, group.lng], {
+                var marker = L.circleMarker([group.lat, group.lng], {
                     radius: radius,
                     color: color,
                     weight: 3,
@@ -861,11 +841,9 @@
                     fillOpacity: opacity
                 });
 
-                // Create popup content
-                const popupContent = createPopupContent(group);
+                var popupContent = createPopupContent(group);
                 marker.bindPopup(popupContent);
 
-                // Add click event for detailed info panel
                 marker.on('click', function() {
                     showInfoPanel(group);
                 });
@@ -878,104 +856,95 @@
         }
 
         function createPopupContent(group) {
-            const totalPlans = group.direct.length + group.associated.length;
+            var totalPlans = group.direct.length + group.associated.length;
             
-            let content = `
-                <div class="custom-popup">
-                    <div class="popup-header">${group.location}</div>
-                    <div class="popup-stats">
-                        <div class="popup-stat">
-                            <div class="popup-stat-number popup-direct">${group.direct.length}</div>
-                            <div class="popup-stat-label">Direct</div>
-                        </div>
-                        <div class="popup-stat">
-                            <div class="popup-stat-number popup-associated">${group.associated.length}</div>
-                            <div class="popup-stat-label">Associated</div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <strong>Total Plans: ${totalPlans}</strong>
-                    </div>
-            `;
+            var content = '<div class="custom-popup">' +
+                '<div class="popup-header">' + group.location + '</div>' +
+                '<div class="popup-stats">' +
+                    '<div class="popup-stat">' +
+                        '<div class="popup-stat-number popup-direct">' + group.direct.length + '</div>' +
+                        '<div class="popup-stat-label">Direct</div>' +
+                    '</div>' +
+                    '<div class="popup-stat">' +
+                        '<div class="popup-stat-number popup-associated">' + group.associated.length + '</div>' +
+                        '<div class="popup-stat-label">Associated</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="margin-top: 10px;"><strong>Total Plans: ' + totalPlans + '</strong></div>';
 
-            // Show threat highlight if filtered
             if (selectedThreat) {
-                content += `<div style="margin-top: 10px; padding: 8px; background: ${threatType === 'shock' ? '#ffebee' : '#fff3e0'}; border-radius: 4px; border-left: 3px solid ${threatType === 'shock' ? '#d32f2f' : '#f57c00'};">
-                    <strong>Highlighted for:</strong> ${selectedThreat}
-                </div>`;
+                var bgColor = threatType === 'shock' ? '#ffebee' : '#fff3e0';
+                var borderColor = threatType === 'shock' ? '#d32f2f' : '#f57c00';
+                content += '<div style="margin-top: 10px; padding: 8px; background: ' + bgColor + '; border-radius: 4px; border-left: 3px solid ' + borderColor + ';">' +
+                    '<strong>Highlighted for:</strong> ' + selectedThreat + '</div>';
             }
 
             if (totalPlans <= 5) {
                 content += '<div style="margin-top: 10px;"><strong>Recent Plans:</strong><ul>';
-                const recentPlans = [...group.direct, ...group.associated]
-                    .sort((a, b) => b.year - a.year)
+                var recentPlans = group.direct.concat(group.associated)
+                    .sort(function(a, b) { return b.year - a.year; })
                     .slice(0, 3);
                 
-                recentPlans.forEach(plan => {
-                    const relevanceType = planData.direct.includes(plan) ? '(Direct)' : '(Associated)';
-                    content += `<li style="margin: 5px 0; font-size: 0.9em;">${plan.title} ${relevanceType} (${plan.year})</li>`;
+                recentPlans.forEach(function(plan) {
+                    var relevanceType = planData.direct.indexOf(plan) !== -1 ? '(Direct)' : '(Associated)';
+                    content += '<li style="margin: 5px 0; font-size: 0.9em;">' + plan.title + ' ' + relevanceType + ' (' + plan.year + ')</li>';
                 });
                 content += '</ul></div>';
             }
 
-            content += `<div style="margin-top: 10px; font-size: 0.8em; color: #666;">Click marker for detailed threat analysis</div></div>`;
+            content += '<div style="margin-top: 10px; font-size: 0.8em; color: #666;">Click marker for detailed threat analysis</div></div>';
 
             return content;
         }
 
         function showInfoPanel(group) {
-            const threats = locationThreats[group.location];
-            let content = `
-                <div class="info-header">${group.location}</div>
-                <div style="margin-bottom: 15px;">
-                    <strong>${group.direct.length}</strong> Direct Relevance • 
-                    <strong>${group.associated.length}</strong> Associated Relevance Plans
-                </div>
-            `;
+            var threats = locationThreats[group.location];
+            var content = '<div class="info-header">' + group.location + '</div>' +
+                '<div style="margin-bottom: 15px;">' +
+                    '<strong>' + group.direct.length + '</strong> Direct Relevance • ' +
+                    '<strong>' + group.associated.length + '</strong> Associated Relevance Plans' +
+                '</div>';
 
             if (threats) {
-                content += `
-                    <div class="threat-section">
-                        <h4>🔥 Primary Shocks</h4>
-                        <ul class="threat-list">
-                            ${threats.shocks.map(shock => `<li>\${shock}</li>`).join('')}
-                        </ul>
-                    </div>
-                    
-                    <div class="stress-section">
-                        <h4>⚠️ Primary Stresses</h4>
-                        <ul class="stress-list">
-                            ${threats.stresses.map(stress => `<li>\${stress}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
+                content += '<div class="threat-section">' +
+                    '<h4>🔥 Primary Shocks</h4>' +
+                    '<ul class="threat-list">';
+                
+                threats.shocks.forEach(function(shock) {
+                    content += '<li>' + shock + '</li>';
+                });
+                
+                content += '</ul></div>' +
+                    '<div class="stress-section">' +
+                    '<h4>⚠️ Primary Stresses</h4>' +
+                    '<ul class="stress-list">';
+                
+                threats.stresses.forEach(function(stress) {
+                    content += '<li>' + stress + '</li>';
+                });
+                
+                content += '</ul></div>';
             } else {
-                content += `
-                    <div style="color: #666; font-style: italic;">
-                        Detailed threat analysis available for major planning areas.
-                    </div>
-                `;
+                content += '<div style="color: #666; font-style: italic;">Detailed threat analysis available for major planning areas.</div>';
             }
 
-            // Add recent plans summary
-            const allPlans = [...group.direct, ...group.associated];
-            const recentPlans = allPlans.sort((a, b) => b.year - a.year).slice(0, 5);
+            var allPlans = group.direct.concat(group.associated);
+            var recentPlans = allPlans.sort(function(a, b) { return b.year - a.year; }).slice(0, 5);
             
-            content += `
-                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
-                    <h4 style="color: #333; margin-bottom: 10px;">Recent Planning Activity</h4>
-                    <ul style="list-style: none; padding: 0;">
-                        ${recentPlans.map(plan => {
-                            const type = planData.direct.includes(plan) ? 'Direct' : 'Associated';
-                            const typeColor = planData.direct.includes(plan) ? '#2e7d32' : '#1976d2';
-                            return `<li style="margin: 8px 0; padding: 5px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em;">
-                                <span style="color: \${typeColor}; font-weight: bold;">[\${type}]</span> 
-                                \${plan.title} (\${plan.year})
-                            </li>`;
-                        }).join('')}
-                    </ul>
-                </div>
-            `;
+            content += '<div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">' +
+                '<h4 style="color: #333; margin-bottom: 10px;">Recent Planning Activity</h4>' +
+                '<ul style="list-style: none; padding: 0;">';
+            
+            recentPlans.forEach(function(plan) {
+                var type = planData.direct.indexOf(plan) !== -1 ? 'Direct' : 'Associated';
+                var typeColor = planData.direct.indexOf(plan) !== -1 ? '#2e7d32' : '#1976d2';
+                content += '<li style="margin: 8px 0; padding: 5px; background: #f8f9fa; border-radius: 4px; font-size: 0.9em;">' +
+                    '<span style="color: ' + typeColor + '; font-weight: bold;">[' + type + ']</span> ' +
+                    plan.title + ' (' + plan.year + ')' +
+                    '</li>';
+            });
+            
+            content += '</ul></div>';
 
             document.getElementById('info-content').innerHTML = content;
             document.getElementById('info-panel').classList.add('show');
@@ -985,8 +954,8 @@
             if (plan.year > currentYear) return false;
             
             if (currentFilter === 'all') return true;
-            if (currentFilter === 'direct') return planData.direct.includes(plan);
-            if (currentFilter === 'associated') return planData.associated.includes(plan);
+            if (currentFilter === 'direct') return planData.direct.indexOf(plan) !== -1;
+            if (currentFilter === 'associated') return planData.associated.indexOf(plan) !== -1;
             
             return true;
         }
@@ -994,11 +963,11 @@
         function filterPlans(filter) {
             currentFilter = filter;
             
-            // Update button states
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`.filter-btn.${filter}`).classList.add('active');
+            var filterBtns = document.querySelectorAll('.filter-btn');
+            for (var i = 0; i < filterBtns.length; i++) {
+                filterBtns[i].classList.remove('active');
+            }
+            document.querySelector('.filter-btn.' + filter).classList.add('active');
             
             updateMarkers();
             updateChart();
@@ -1012,9 +981,9 @@
         }
 
         function updateStats() {
-            const visibleDirect = planData.direct.filter(shouldShowPlan).length;
-            const visibleAssociated = planData.associated.filter(shouldShowPlan).length;
-            const total = visibleDirect + visibleAssociated;
+            var visibleDirect = planData.direct.filter(shouldShowPlan).length;
+            var visibleAssociated = planData.associated.filter(shouldShowPlan).length;
+            var total = visibleDirect + visibleAssociated;
 
             document.getElementById('direct-count').textContent = visibleDirect;
             document.getElementById('associated-count').textContent = visibleAssociated;
@@ -1022,25 +991,28 @@
         }
 
         function initChart() {
-            const ctx = document.getElementById('timeline-chart').getContext('2d');
+            var ctx = document.getElementById('timeline-chart').getContext('2d');
             
-            // Prepare data for timeline chart
-            const years = Array.from({length: 2025 - 1992 + 1}, (_, i) => 1992 + i);
-            const directByYear = {};
-            const associatedByYear = {};
+            var years = [];
+            for (var i = 1992; i <= currentYear; i++) {
+                years.push(i);
+            }
+            
+            var directByYear = {};
+            var associatedByYear = {};
 
-            years.forEach(year => {
+            years.forEach(function(year) {
                 directByYear[year] = 0;
                 associatedByYear[year] = 0;
             });
 
-            planData.direct.forEach(plan => {
+            planData.direct.forEach(function(plan) {
                 if (plan.year >= 1992 && plan.year <= currentYear) {
                     directByYear[plan.year]++;
                 }
             });
 
-            planData.associated.forEach(plan => {
+            planData.associated.forEach(function(plan) {
                 if (plan.year >= 1992 && plan.year <= currentYear) {
                     associatedByYear[plan.year]++;
                 }
@@ -1049,18 +1021,18 @@
             chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: years.filter(year => year <= currentYear),
+                    labels: years,
                     datasets: [
                         {
                             label: 'Direct Relevance',
-                            data: years.filter(year => year <= currentYear).map(year => directByYear[year]),
+                            data: years.map(function(year) { return directByYear[year]; }),
                             backgroundColor: '#2e7d32',
                             borderColor: '#1b5e20',
                             borderWidth: 1
                         },
                         {
                             label: 'Associated Relevance',
-                            data: years.filter(year => year <= currentYear).map(year => associatedByYear[year]),
+                            data: years.map(function(year) { return associatedByYear[year]; }),
                             backgroundColor: '#1976d2',
                             borderColor: '#0d47a1',
                             borderWidth: 1
@@ -1101,30 +1073,34 @@
         function updateChart() {
             if (!chart) return;
 
-            const years = Array.from({length: currentYear - 1992 + 1}, (_, i) => 1992 + i);
-            const directByYear = {};
-            const associatedByYear = {};
+            var years = [];
+            for (var i = 1992; i <= currentYear; i++) {
+                years.push(i);
+            }
+            
+            var directByYear = {};
+            var associatedByYear = {};
 
-            years.forEach(year => {
+            years.forEach(function(year) {
                 directByYear[year] = 0;
                 associatedByYear[year] = 0;
             });
 
-            planData.direct.forEach(plan => {
+            planData.direct.forEach(function(plan) {
                 if (plan.year >= 1992 && plan.year <= currentYear) {
                     directByYear[plan.year]++;
                 }
             });
 
-            planData.associated.forEach(plan => {
+            planData.associated.forEach(function(plan) {
                 if (plan.year >= 1992 && plan.year <= currentYear) {
                     associatedByYear[plan.year]++;
                 }
             });
 
             chart.data.labels = years;
-            chart.data.datasets[0].data = years.map(year => directByYear[year]);
-            chart.data.datasets[1].data = years.map(year => associatedByYear[year]);
+            chart.data.datasets[0].data = years.map(function(year) { return directByYear[year]; });
+            chart.data.datasets[1].data = years.map(function(year) { return associatedByYear[year]; });
             chart.update();
         }
 
@@ -1132,7 +1108,6 @@
             document.getElementById('info-panel').classList.remove('show');
         }
 
-        // Initialize map when page loads
         document.addEventListener('DOMContentLoaded', function() {
             initMap();
         });
