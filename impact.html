@@ -1,0 +1,250 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Goleta Slough — All Threats, Projects, and Weighted Circles</title>
+    <!-- Tailwind & DaisyUI for sidebar, Leaflet for map -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@latest/dist/full.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@latest/dist/leaflet.css" />
+    <style>
+        body { margin: 0; }
+        .main-container { display: flex; width: 100vw; height: 100vh; }
+        .sidebar {
+            width: 390px; min-width:240px; background: white; padding: 20px 16px 20px 18px; border-right: 3px solid #ccc; overflow-y: auto;
+        }
+        .map-section { flex: 1 1 0; position: relative; }
+        #map { width: 100%; height: 100vh; z-index: 1;}
+        .legend-dot { display:inline-block;width:18px;height:18px;border-radius:50%;margin-right:10px;vertical-align:middle;}
+        .btn-filter { display:block; width:100%; margin-bottom:7px; text-align:left; padding:9px 11px; border-radius:6px; border:none; cursor:pointer; font-size:15px;}
+        .btn-filter.selected { font-weight:bold; box-shadow:0 0 0 1px #a21caf55;}
+        .btn-filter-area {background:#fce7f3; color:#831843;}
+        .btn-filter-projects {background:#dbeafe; color:#1e40af;}
+        .btn-filter-circles {background:#f5d0fe; color:#be185d;}
+        .btn-filter-all {background:#f3f4f6;color:#2d3748; border:1px solid #e5e7eb;}
+        .custom-popup h3 {margin:2px 0 6px 0; color:#2c5530;font-size: 1.12rem;font-weight:bold;}
+        .custom-popup p {margin:2px 0; font-size:0.98rem;}
+    </style>
+</head>
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <h1 style="font-size:1.55em;"><b>Goleta Slough<br>Resilience Threats & Projects Map</b></h1>
+        <p class="text-sm my-2">Interactively explore <b>key vulnerability areas</b>, <b>individual resilience projects</b>, and <b>project density hotspots</b>. Use the toggles to show or hide any map layer.</p>
+        <div class="mt-4 mb-4">
+            <h3 class="mb-2">🧭 Map Layers</h3>
+            <button id="btn_all"    class="btn-filter btn-filter-all selected" onclick="enableLayers(true,true,true)">Show ALL Layers</button>
+            <button id="btn_areas"  class="btn-filter btn-filter-area" onclick="enableLayers(true,false,false)">Show Area Icons Only</button>
+            <button id="btn_projects" class="btn-filter btn-filter-projects" onclick="enableLayers(false,true,false)">Show Projects Only</button>
+            <button id="btn_circles" class="btn-filter btn-filter-circles" onclick="enableLayers(false,false,true)">Show Weighted Circles Only</button>
+            <button                    class="btn-filter btn-filter-all" style="background:#fff;border:1.4px solid #be185d;color:#be185d;margin-top:6px;" onclick="enableLayers(true,true,true,true)">Show All + Circles</button>
+        </div>
+        <div class="bg-base-200 p-4 rounded-lg mb-6">
+            <h3>Legend</h3>
+            <div class="my-2"><span class="legend-dot" style="background: #38b2ac;"></span>Estuary/Wetlands Area</div>
+            <div class="my-2"><span class="legend-dot" style="background: #34d399;"></span>Creek/Tributary Area</div>
+            <div class="my-2"><span class="legend-dot" style="background: #ef4444;"></span>Urban/Community Area</div>
+            <div class="my-2"><span class="legend-dot" style="background: #f59e0b;"></span>Wildfire/Urban Interface</div>
+            <div class="my-2"><span class="legend-dot" style="background: #7c3aed;"></span>Critical Infrastructure</div>
+            <div class="my-2"><span class="legend-dot" style="background: #be185d;opacity:0.60;"></span>Project Density (Weighted Circle)</div>
+            <div class="my-2"><span class="legend-dot" style="background: #2563eb;"></span>Project Location</div>
+        </div>
+        <div class="max-h-56 overflow-y-scroll mb-6">
+            <h3 class="mb-1">Key Areas & Hotspots</h3>
+            <ul style="font-size:0.96em;list-style:disc;padding-left:18px;">
+                <li>Goleta Slough Estuary, Mouth & Beach Park</li>
+                <li>Old Town Goleta & San Pedro Creek</li>
+                <li>Airport & Floodplain Margins</li>
+                <li>Creeks: Atascadero, Tecolotito, Carneros</li>
+                <li>Bluffs (UCSB), Devereux, Isla Vista edge</li>
+                <li>Wildfire/Urban Interface/Northern Edge</li>
+            </ul>
+        </div>
+        <div   class="max-h-36 overflow-y-scroll">
+            <h3>Sample Individual Projects (Blue Dots)</h3>
+            <ul id="projListSidebar" style="font-size:0.97em; list-style:disc; padding-left:18px;"></ul>
+        </div>
+    </div>
+    <div class="map-section"><div id="map"></div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@latest/dist/leaflet.js"></script>
+<script>
+    // ----- Area Icons Pins -----
+    const areas = [
+        { name: 'Goleta Slough Ecological Reserve/Wetlands',lat: 34.4213, lng: -119.8522, type:"estuary", threat:"Habitat, SLR, restoration" },
+        { name: 'Goleta Slough Mouth',    lat: 34.41785, lng: -119.8683, type:"estuary", threat:"Flood, sediment, mouth mgmt" },
+        { name: 'Goleta Beach Park',      lat: 34.41844, lng: -119.8650, type:"estuary", threat:"Erosion, buffer, rec access" },
+        { name: 'Devereux Slough',        lat: 34.4135,  lng: -119.8790, type:"estuary", threat:"SLR, habitat, connectivity" },
+        { name: 'San Jose Creek',         lat: 34.4355,  lng: -119.8234, type: "creek", threat:"Flood, drought, water management" },
+        { name: 'Atascadero Creek',       lat: 34.4272,  lng: -119.8485, type: "creek", threat:"Sediment, water quality" },
+        { name: 'Tecolotito Creek',       lat: 34.4382,  lng: -119.8215, type: "creek", threat:"Urban flooding/connectivity" },
+        { name: 'Santa Barbara Airport',  lat: 34.4261,  lng: -119.8442, type: "infra", threat:"SLR, flooding, infrastructure" },
+        { name: 'UCSB Coastal Bluffs',    lat: 34.4105,  lng: -119.8710, type: "infra", threat:"Coastal erosion, SLR" },
+        { name: 'Old Town Goleta',        lat: 34.4195,  lng: -119.8560, type: "urban", threat:"Green space, flooding" },
+        { name: 'Wildfire/Urban Interface (Cathedral Oaks)', lat: 34.439, lng: -119.830, type:"wildfire", threat:"Wildfire/post-fire flood" },
+        { name: 'Isla Vista/Wetlands Buffer',lat:34.4137,lng:-119.8607, type:"urban",threat:"Urbanization, trash, wetlands" },
+        { name: 'Airport Margin/Hollister Ave',lat:34.4192,lng:-119.8510,type:"urban",threat:"Commercial corridor, flooding risk"}
+    ];
+    const typeColors = { estuary: "#38b2ac", creek: "#34d399", urban: "#ef4444", wildfire: "#f59e0b", infra: "#7c3aed" };
+    const typeEmojis = { estuary: "🌿", creek: "💧", urban: "🏙️", wildfire: "🔥", infra: "🛬" };
+
+    // ----- Weighted Circles Data -----
+    const hotspotCircles = [
+        { n:29, label:"Goleta Slough Ecological Reserve & Wetlands",        lat:34.4213, lng:-119.8522 },
+        { n:14, label:"Old Town Goleta & San Pedro Creek",                  lat:34.4195, lng:-119.8560 },
+        { n:9,  label:"Goleta Beach & Atascadero Creek",                    lat:34.4190, lng:-119.8620 },
+        { n:25, label:"Slough Mouth & Airport Edge",                        lat:34.4179, lng:-119.8647 },
+        { n:18, label:"Old Town/Hollister Avenue Corridor",                 lat:34.4192, lng:-119.8510 },
+        { n:16, label:"Slough Margin & Airport Runways",                    lat:34.4255, lng:-119.8430 },
+        { n:11, label:"Goleta Beach Park & UCSB Bluffs",                    lat:34.4167, lng:-119.8695 },
+        { n:4,  label:"Goleta Slough Watershed (broad)",                    lat:34.4300, lng:-119.8500 },
+        { n:2,  label:"Upstream San Jose Creek (tributaries)",              lat:34.4355, lng:-119.8234 },
+        { n:2,  label:"Urban Old Town (park inequity)",                     lat:34.4201, lng:-119.8577 }
+    ];
+
+    // ----- Projects Sample List -----
+    const regionCoords = {
+        "Goleta Slough Ecological Reserve": [34.4213, -119.8522],
+        "Goleta Slough Mouth": [34.41785, -119.8683],
+        "Goleta Beach Park": [34.41844, -119.8650],
+        "San Jose Creek": [34.4355, -119.8234],
+        "Santa Barbara Airport": [34.4261, -119.8442],
+        "Hollister Avenue": [34.4192,-119.8510],
+        "Atascadero Creek": [34.4272,-119.8485],
+        "Isla Vista": [34.4137,-119.8607]
+    };
+    // A few demo projects (add all real ones similarly)
+    const projectList = [
+        { id: 25, name: "Policy CIRC-GV-12", region: "Goleta Slough Ecological Reserve" },
+        { id: 141, name: "San Jose Creek/Hollister Ave Bridge Replacement", region: "San Jose Creek" },
+        { id: 144, name: "Airport Master Drainage Plan Update", region: "Santa Barbara Airport" },
+        { id: 14, name: "Parking Lot 38 Bioswale", region: "Goleta Beach Park" },
+        { id: 68, name: "Hollister Avenue Complete Streets", region: "Hollister Avenue" },
+        { id: 13, name: "East Storke Wetland Restoration", region: "Goleta Slough Ecological Reserve" },
+        { id: 77, name: "La Patera Drainage System Improvements", region: "Goleta Beach Park" },
+        { id: 2,  name: "Hollister Drainage Improvements", region: "Hollister Avenue" }
+    ];
+
+    // ----- Map Initialization -----
+    const map = L.map('map').setView([34.42, -119.855], 13);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '<a href="https://osm.org/copyright" target="_blank">OpenStreetMap</a>'
+    }).addTo(map);
+
+    // ===== Overlay Layers =====
+    let areaMarkers = [], projectMarkers = [], circleLayers = [];
+
+    // Area Icons
+    areas.forEach(area => {
+        let marker = L.marker([area.lat, area.lng], {
+            icon: L.divIcon({
+                iconSize: [32,32],
+                html: `<div title="${area.name}" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:${typeColors[area.type]};color:#fff;font-size:18px;font-weight:bold;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.14);">${typeEmojis[area.type]}</div>`
+            })
+        })
+        .bindPopup(`<div class="custom-popup">
+            <h3>${area.name}</h3>
+            <p><b>Area Type:</b> ${area.type.replace(/^./,c=>c.toUpperCase())}</p>
+            <p><b>Hazards / Resilience:</b> ${area.threat}</p>
+        </div>`);
+        areaMarkers.push(marker);
+        marker.addTo(map);
+    });
+
+    // Project pins (small blue dots; jitter if region repeated)
+    let regionPinCounts = {};
+    projectList.forEach((p, i) => {
+        let r = p.region;
+        if (!regionCoords[r]) r = "Goleta Slough Ecological Reserve";
+        if (!regionPinCounts[r]) regionPinCounts[r] = 0;
+        let n = regionPinCounts[r]++;
+        let base = regionCoords[r];
+        let lat = base[0] + 0.00039 * Math.cos(n * 2 * Math.PI / 8);
+        let lng = base[1] + 0.00039 * Math.sin(n * 2 * Math.PI / 8);
+
+        let marker = L.marker([lat, lng], {
+            icon: L.divIcon({
+                iconSize: [19,19],
+                html: `<div style="width:15px;height:15px;background:#2563eb;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:bold;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 2.5px rgba(30,64,175,.22);">•</div>`
+            })
+        })
+        .bindPopup(`<div class="custom-popup">
+            <h3>Project #${p.id}</h3>
+            <p><strong>${p.name}</strong></p>
+            <p><i>Region:</i> ${p.region}</p>
+        </div>`);
+        projectMarkers.push(marker);
+        marker.addTo(map);
+    });
+
+    // Weighted circles -- purple/pink
+    hotspotCircles.forEach(d => {
+        // Circle size: n projects; radius (meters)
+        let radius = 120 + 11.5 * Math.sqrt(d.n);
+        let circle = L.circle([d.lat, d.lng], {
+            color: "#be185d",
+            fillColor: "#d946ef",
+            fillOpacity: 0.37,
+            weight: 2,
+            radius: radius
+        });
+        circle.bindPopup(`<div class="custom-popup"><h3>${d.label}</h3><div><b>Number of Projects:</b> ${d.n}</div></div>`);
+        circleLayers.push(circle);
+        // number overlay
+        let lbl = L.marker([d.lat, d.lng], {
+            icon: L.divIcon({
+                html: `<span style="font-size:1.04em;color:#a21caf;font-weight:600;text-shadow:2px 1px 10px #fff;">${d.n}</span>`,
+                className: "",
+                iconSize: [26, 18],
+                iconAnchor: [13, 10]
+            })
+        });
+        circleLayers.push(lbl);
+        circle.addTo(map);
+        lbl.addTo(map);
+    });
+
+    // ----- Layer Toggles -----
+    function setLayerVisibility(areasOn, projectsOn, circlesOn) {
+        areaMarkers.forEach(m=>areasOn ? map.addLayer(m) : map.removeLayer(m));
+        projectMarkers.forEach(m=>projectsOn ? map.addLayer(m) : map.removeLayer(m));
+        circleLayers.forEach(l=>circlesOn ? map.addLayer(l) : map.removeLayer(l));
+    }
+    function deselectAllBtns() {
+        document.getElementById("btn_all").classList.remove("selected");
+        document.getElementById("btn_areas").classList.remove("selected");
+        document.getElementById("btn_projects").classList.remove("selected");
+        document.getElementById("btn_circles").classList.remove("selected");
+        document.querySelectorAll(".btn-filter-all:not(#btn_all)").forEach(btn=>btn.classList.remove("selected"));
+    }
+    // Core toggle function
+    function enableLayers(area, proj, circle, all=false) {
+        setLayerVisibility(area, proj, circle);
+        deselectAllBtns();
+        if (all || (area && proj && circle)) {
+            document.getElementById("btn_all").classList.add("selected");
+            if(all) document.querySelector('.btn-filter-all:not(#btn_all)').classList.add("selected");
+        }
+        else if (area && !proj && !circle) document.getElementById("btn_areas").classList.add("selected");
+        else if (!area && proj && !circle) document.getElementById("btn_projects").classList.add("selected");
+        else if (!area && !proj && circle) document.getElementById("btn_circles").classList.add("selected");
+    }
+    window.enableLayers = enableLayers;
+
+    // Project list in sidebar for demo
+    (() => {
+        let ul = document.getElementById("projListSidebar");
+        projectList.forEach(p => {
+            let li = document.createElement("li");
+            li.textContent = `#${p.id}: ${p.name} (${p.region})`;
+            ul.appendChild(li);
+        });
+    })();
+
+    // Default: show all (except all-layers-plus-circles toggle)
+    enableLayers(true,true,true);
+
+    map.on('click', function() { map.closePopup(); });
+</script>
+</body>
+</html>
