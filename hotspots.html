@@ -1,0 +1,171 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Goleta Slough Hotspots Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <!-- Leaflet map library -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    html, body {height:100%; margin:0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;}
+    .container {display: flex; height: 100vh;}
+    .sidebar {
+      width: 340px; background: #fff; box-shadow: 2px 0 8px rgba(0,0,0,.11);
+      padding: 24px 18px 6px 18px; overflow-y:auto;
+    }
+    .map-container {flex:1; position:relative; min-width:250px;}
+    #map {height:100vh;}
+    .slough-hotspots-key {margin-top: 8px; margin-bottom:22px;}
+    #slough-hotspot-list li {
+        margin-bottom:6px; cursor:pointer;
+        padding:2px 5px;border-radius:4px;transition:background 0.15s;
+        font-size: 1rem;
+    }
+    #slough-hotspot-list li:hover, #slough-hotspot-list li.active {background:#ffe3f3;}
+    .info-panel {
+      display:none;
+      position: fixed;
+      top:50%; left:50%; transform:translate(-50%,-50%);
+      z-index:9999;
+      padding: 24px 28px 18px 22px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow:0 4px 30px rgb(30 25 30/20%), 0 1px 3px #f5e4fa;
+      min-width: 260px; min-height: 60px; max-width:95vw;
+      animation: fadein 0.22s;
+    }
+    .info-panel.show {display:block;}
+    .close-btn {
+      float:right;font-size:1.7em;border:none; background:none;
+      color:#e3a; cursor:pointer; margin-left:4px;
+    }
+    .info-header { font-size:1.35em; font-weight:bold; color:#E75480; margin-bottom:13px;}
+    .info-threats { margin:8px 0 4px 0;color:#7d234c;}
+    .info-notes { color:#222; margin-bottom:8px;}
+    @keyframes fadein {from{opacity:0;transform:translate(-50%,-80%);} to{opacity:1;transform:translate(-50%,-50%);}}
+    @media (max-width:700px) {
+      .container {flex-direction:column;}
+      .sidebar {width:auto;max-height:180px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="sidebar">
+    <h2 style="margin-bottom:6px;">Goleta Slough Explorer</h2>
+    <div style="color:#555;margin-bottom:10px;">Explore regional ecological threats by location.</div>
+    <div class="slough-hotspots-key">
+      <strong>Goleta Slough Hotspots:</strong>
+      <ul id="slough-hotspot-list" style="padding-left: 17px; margin:8px 0 0 0; "></ul>
+    </div>
+    <div style="margin-top:.8em;margin-bottom:.8em; font-size:.93em;color:#888;">
+      Click a hotspot pin or name for details.<br>Close with the <b>&times;</b> in the info box.
+    </div>
+  </div>
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="info-panel" id="info-panel">
+      <button class="close-btn" onclick="closeInfoPanel()">&times;</button>
+      <div id="info-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Leaflet library (map) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// --- 1. Hotspot Data
+const sloughHotspots = [
+  { id: "estuary", name: "Goleta Slough Estuary",           lat: 34.4202,  lng: -119.8513,  threats: ["Habitat loss", "Sea level rise"], notes: "Main wetlands" },
+  { id: "mouth",   name: "Goleta Slough Mouth",             lat: 34.41785, lng: -119.8683,  threats: ["Tidal flooding", "Sediment", "Berm management"], notes: "Where slough meets ocean" },
+  { id: "beach",   name: "Goleta Beach Park",               lat: 34.41844, lng: -119.8650,  threats: ["Coastal erosion", "Public access", "Sediment"], notes: "Recreation & buffer" },
+  { id: "sanjose", name: "San Jose Creek",                  lat: 34.4355,  lng: -119.8234,  threats: ["Flooding", "Water management", "Upstream issues"], notes: "Main tributary" },
+  { id: "atascadero", name: "Atascadero Creek",             lat: 34.4272,  lng: -119.8485,  threats: ["Sediment", "Water quality", "Habitat"], notes: "Main tributary" },
+  { id: "carneros", name: "Tecolotito/Carneros Creek",      lat: 34.4382,  lng: -119.8215,  threats: ["Flooding/urban runoff", "Connectivity"], notes: "Main tributary" },
+  { id: "airport",    name: "Santa Barbara Airport",        lat: 34.4261,  lng: -119.8442,  threats: ["Sea level rise", "Infrastructure", "Flooding"], notes: "Critical facility" },
+  { id: "ucsb",       name: "UCSB Coastal Bluffs/West Campus", lat: 34.4105,  lng: -119.8710,  threats: ["Coastal erosion", "SLR", "Bluff collapse"], notes: "Coastal exposure" },
+  { id: "oldtown",    name: "Old Town Goleta/Uptown Urban", lat: 34.41995, lng: -119.8573,  threats: ["Green space inequity", "Infrastructure", "Runoff"], notes: "Urban stressor zone" },
+  { id: "wildfire",   name: "Wildfire-Urban Interface (East/Cathedral Oaks)", lat: 34.439,    lng: -119.830,  threats: ["Wildfire", "Post-fire erosion"], notes: "Eastern/northern edge" },
+  { id: "devereux",   name: "Devereux Slough",              lat: 34.4135,  lng: -119.8790,  threats: ["SLR", "Habitat", "Connectivity"], notes: "Western adjacent slough" },
+  { id: "isla",       name: "Isla Vista / Wetlands Buffer", lat: 34.4137,  lng: -119.8607,  threats: ["Urbanization", "Trash", "Water quality"], notes: "Dense development" }
+];
+const sloughHotspotMarkers = {};
+
+// --- 2. SVG Pink Pin Icon (always works)
+const pinkPinIcon = L.icon({
+  iconUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="25" height="41" viewBox="0 0 25 41"><path d="M12.5 0C5.596 0 0 5.856 0 13.251c0 8.266 11.156 26.249 11.64 26.983a1.071 1.071 0 0 0 1.718 0C13.844 39.5 25 21.517 25 13.251 25 5.857 19.404 0 12.5 0z" fill="%23E75480" stroke="black" stroke-width="2"/><circle cx="12.5" cy="13" r="5" fill="white" stroke="black" stroke-width="2"/></svg>',
+  iconSize:     [25, 41],
+  iconAnchor:   [12, 41],
+  popupAnchor:  [1, -34],
+  shadowUrl:    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  shadowSize:   [41, 41],
+  shadowAnchor: [12, 41]
+});
+
+// --- 3. Init map
+const map = L.map('map').setView([34.4202, -119.8513], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+L.control.scale().addTo(map);
+
+// --- 4. Add pink pins that trigger info panel
+function addSloughHotspotMarkers() {
+  sloughHotspots.forEach(area => {
+    const marker = L.marker([area.lat, area.lng], {icon: pinkPinIcon, title: area.name})
+      .addTo(map)
+      .on('click', () => {
+        showSloughHotspotInfo(area);
+        highlightInLegend(area.id);
+      });
+    sloughHotspotMarkers[area.id] = marker;
+  });
+}
+
+function showSloughHotspotInfo(area) {
+  const ic = document.getElementById('info-content');
+  ic.innerHTML =
+    `<div class="info-header">${area.name}</div>
+     <div class="info-threats" style="margin-bottom:7px;"><b>Threats:</b> ${area.threats.join(", ")}</div>
+     <div class="info-notes"><b>Notes:</b> ${area.notes}</div>
+     <div class="info-source" style="margin-top:9px;font-size:0.94em;color:#888;">(Goleta Slough Hotspot)</div>`;
+  document.getElementById('info-panel').classList.add('show');
+}
+function closeInfoPanel() {
+  document.getElementById('info-panel').classList.remove('show');
+  highlightInLegend(); // Remove highlight
+}
+
+// --- 5. Legend with clickable hotspot names
+function populateSloughHotspotLegend() {
+  const ul = document.getElementById('slough-hotspot-list');
+  if (!ul) return;
+  ul.innerHTML = '';
+  sloughHotspots.forEach(area => {
+    const li = document.createElement('li');
+    li.textContent = area.name;
+    li.onclick = () => {
+      map.setView([area.lat, area.lng], 14, {animate:true});
+      showSloughHotspotInfo(area);
+      highlightInLegend(area.id);
+    };
+    ul.appendChild(li);
+  });
+}
+
+// --- 6. Highlight selected legend, clear on close
+function highlightInLegend(id) {
+  const lis = document.querySelectorAll('#slough-hotspot-list li');
+  lis.forEach(li => {
+    li.classList.remove('active');
+    if (id && li.textContent === sloughHotspots.find(h=>h.id===id).name) li.classList.add('active');
+  });
+}
+
+// --- 7. Initialize everything
+addSloughHotspotMarkers();
+populateSloughHotspotLegend();
+</script>
+</body>
+</html>
